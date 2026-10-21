@@ -15,9 +15,6 @@ dependencies = [
     "uvicorn>=0.54.0",
 ]
 
-[project.scripts]
-python-web = "python_web:main"
-
-[build-system]
-requires = ["uv_build>=0.12.21,<0.13.0"]
-build-backend = "uv_build"
+# 项目只用于统一管理依赖和虚拟环境，不再打包 Python 包
+[tool.uv]
+package = false
