@@ -8,3 +8,24 @@ wheels/
 
 # Virtual environments
 .venv
+
+# 前端依赖与构建产物
+node_modules/
+.npm/
+*.local
+
+# 环境变量（保留示例文件）
+.env
+.env.*
+!.env.example
+
+# 编辑器与操作系统
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# 测试与工具缓存
+.pytest_cache/
+.ruff_cache/
+coverage/

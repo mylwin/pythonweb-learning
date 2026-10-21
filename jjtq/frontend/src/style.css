@@ -1,0 +1,91 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 移动端适配基础样式与主题变量 */
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* 主题变量，会被 store/theme.js 覆盖 */
+  --primary-color: #1989fa;
+  --text-color: #333;
+  --text-color-light: #666;
+  --text-color-lighter: #999;
+  --border-color: #ebedf0;
+  --background-color: #f7f8fa;
+  --white: #fff;
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+
+  color: var(--text-color);
+  background-color: var(--background-color);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+}
+
+html {
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-size: 14px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#app {
+  height: 100%;
+}
+
+/* 统一的最大宽度容器 */
+.app {
+  max-width: 750px;
+  margin: 0 auto;
+  height: 100%;
+}
+
+/* 移动端适配：按 750 设计稿换算 rem */
+@media screen and (max-width: 750px) {
+  html {
+    font-size: calc(100vw / 750 * 16);
+  }
+}
+
+/* 适配 iPhone 底部安全区域 */
+.van-tabbar {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+/* 滚动条优化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
