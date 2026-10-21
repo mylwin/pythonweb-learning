@@ -4,7 +4,7 @@
 
 ### 问题现象
 
-运行 `src/python_web/test/test2.py` 时，FastAPI 在启动阶段执行建表操作失败，报错如下：
+运行 `study/day02/test2.py` 时，FastAPI 在启动阶段执行建表操作失败，报错如下：
 
 ```text
 sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError)
@@ -37,7 +37,7 @@ docker exec -it mysql mysql -u root -p
 创建数据库后，在项目根目录重新运行程序：
 
 ```bash
-.venv/bin/python src/python_web/test/test2.py
+.venv/bin/python study/day02/test2.py
 ```
 
 本次修复只补建数据库，无需修改 `test2.py` 的连接配置或建表代码。

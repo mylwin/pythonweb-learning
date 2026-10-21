@@ -4,11 +4,15 @@ day01 测试代码
 
 import asyncio
 import time
+from pathlib import Path as PathlibPath
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
+
+# 学习资料目录：study/test_files
+ASSETS_DIR = PathlibPath(__file__).resolve().parents[1] / "test_files"
 
 
 class User(BaseModel):
@@ -225,7 +229,7 @@ async def file():
     """
     返回文件
     """
-    filePath = "../test_files/test1.png"
+    filePath = ASSETS_DIR / "test1.png"
     return FileResponse(filePath)
 
 
