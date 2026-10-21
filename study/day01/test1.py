@@ -50,11 +50,11 @@ class BookOut(BookIn):
     id: int = Field(description="图书编号")
 
 
-def getUser(id: int) -> User:
+def get_user(user_id: int) -> User:
     """
     获取用户信息
     """
-    return User(id=id, name="张三", age=18)
+    return User(id=user_id, name="张三", age=18)
 
 
 # 创建一个FastAPI实例
@@ -62,7 +62,7 @@ app = FastAPI(title="python web day01 测试代码")
 
 
 @app.get("/sync")
-def funcSync():
+def func_sync():
     """
     同步函数测试接口
     """
@@ -74,7 +74,7 @@ def funcSync():
 
 
 @app.get("/async")
-async def funcAsync():
+async def func_async():
     """
     异步函数测试接口
     """
@@ -86,7 +86,7 @@ async def funcAsync():
 
 
 @app.post("/user")
-async def user(user: User):
+async def create_user(user: User):
     """
     创建用户测试接口
     """
@@ -102,7 +102,7 @@ async def hello():
 
 
 @app.get("/book/{id}")
-async def getBook(id: int):
+async def get_book(id: int):
     """
     创建路径参数测试接口
     """
@@ -110,17 +110,17 @@ async def getBook(id: int):
 
 
 @app.get("/user/{id}")
-async def getUserById(id: int):
+async def get_user_by_id(id: int):
     """
     创建路径参数练习接口
     """
-    user: User = getUser(id)
+    user: User = get_user(id)
 
     return {"id": user.id, "name": user.name, "age": user.age}
 
 
 @app.get("/news/category/{category_id}")
-async def getNewsByCategoryId(
+async def get_news_by_category_id(
     category_id: Annotated[
         int,
         Path(
@@ -138,7 +138,7 @@ async def getNewsByCategoryId(
 
 
 @app.get("/news/category/name/{category_name}")
-async def getNewsByCategoryName(
+async def get_news_by_category_name(
     category_name: Annotated[
         str,
         Path(
@@ -160,7 +160,7 @@ async def getNewsByCategoryName(
 
 # 查询参数练习
 @app.get("/books")
-async def getBooks(
+async def get_books(
     category: Annotated[
         str,
         Query(
@@ -188,26 +188,26 @@ async def getBooks(
 
 
 # 请求体参数练习
-fakeBookDb: dict[int, BookOut] = {}
-nextId = 1
+fake_book_db: dict[int, BookOut] = {}
+next_id = 1
 
 
 @app.post("/books", response_model=BookOut, status_code=201)
-def createBook(book: BookIn) -> BookOut:
+def create_book(book: BookIn) -> BookOut:
     """
     新增图书
     """
-    global nextId
+    global next_id
     # model_dump(): 将模型对象转换为字典
-    newBook = BookOut(id=nextId, **book.model_dump())
-    fakeBookDb[nextId] = newBook
-    nextId += 1
-    return newBook
+    new_book = BookOut(id=next_id, **book.model_dump())
+    fake_book_db[next_id] = new_book
+    next_id += 1
+    return new_book
 
 
 # 测试 HTML 响应格式
 @app.get("/html", response_class=HTMLResponse)
-async def html():
+async def html_response():
     """
     返回 HTML
     """
@@ -225,23 +225,23 @@ async def html():
 
 # 测试文件响应格式
 @app.get("/file")
-async def file():
+async def file_response():
     """
     返回文件
     """
-    filePath = ASSETS_DIR / "test1.png"
-    return FileResponse(filePath)
+    file_path = ASSETS_DIR / "test1.png"
+    return FileResponse(file_path)
 
 
 # 测试异常处理
 @app.get("/error/{id}")
-async def error(
+async def error_response(
     id: Annotated[
         int, Path(title="用户 ID", description="测试时候 id 只有 1，2，3，4，5")
     ],
 ):
-    idList = [1, 2, 3, 4, 5]
-    if id not in idList:
+    id_list = [1, 2, 3, 4, 5]
+    if id not in id_list:
         raise HTTPException(status_code=404, detail="当前 Id 不存在")
     return {"id": id}
 

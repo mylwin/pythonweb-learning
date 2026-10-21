@@ -58,7 +58,7 @@ docker exec -it mysql mysql -u root -p
 
 ### 问题现象与原因
 
-接口使用 `db: AsyncSession = Depends(getDataBase)` 时，Ruff 提示 `B008: Do not perform function call Depends in argument defaults`。
+接口使用 `db: AsyncSession = Depends(get_database)` 时，Ruff 提示 `B008: Do not perform function call Depends in argument defaults`。
 
 B008 检查参数默认值中的函数调用，因为默认值在函数定义时求值，多次调用会复用同一个默认值。这里的 `Depends` 是 FastAPI 的依赖声明，并不是直接创建数据库会话；这条提示属于静态检查告警。
 
@@ -70,13 +70,13 @@ B008 检查参数默认值中的函数调用，因为默认值在函数定义时
 from typing import Annotated
 
 @app.get("/book/books")
-async def getBookList(db: Annotated[AsyncSession, Depends(getDataBase)]):
+async def get_book_list(db: Annotated[AsyncSession, Depends(get_database)]):
     result: Result = await db.execute(select(Book))
-    user = result.scalars().all()
-    return user
+    books = result.scalars().all()
+    return books
 ```
 
-这样参数默认值中不再包含函数调用，同时保留 FastAPI 对 `getDataBase` 的依赖注入及会话生命周期管理。不要把 `Depends(getDataBase)` 移到函数体内，它是由 FastAPI 解析的依赖声明。
+这样参数默认值中不再包含函数调用，同时保留 FastAPI 对 `get_database` 的依赖注入及会话生命周期管理。不要把 `Depends(get_database)` 移到函数体内，它是由 FastAPI 解析的依赖声明。
 
 ## 2026-10-17：/book/summary 被当作按 id 查询，返回 422
 
@@ -92,15 +92,15 @@ async def getBookList(db: Annotated[AsyncSession, Depends(getDataBase)]):
 
 ```python
 @app.get("/book/books")
-async def getBookList(...):
+async def get_book_list(...):
     ...
 
 @app.get("/book/summary")
-async def getBooksCount(...):
+async def get_books_count(...):
     ...
 
 @app.get("/book/{id}")
-async def getBookById(...):
+async def get_book_by_id(...):
     ...
 ```
 
@@ -118,9 +118,9 @@ async def getBookById(...):
 
 ```python
 @app.get("/book/{id:int}")
-async def getBookById(
+async def get_book_by_id(
     id: Annotated[int, Path(title="图书编号", description="图书编号", nullable=False)],
-    db: Annotated[AsyncSession, Depends(getDataBase)],
+    db: Annotated[AsyncSession, Depends(get_database)],
 ):
     ...
 ```
@@ -135,7 +135,7 @@ async def getBookById(
 
 代码已使用 `/book/{id:int}`，但 Uvicorn 工作进程退出，重载进程仍占用 8000 端口，实际请求超时。此时看到的旧 422 响应不能用于判断最新代码是否已加载。
 
-直接导入模块发现，新增接口将 SQLAlchemy ORM 类 `Book` 作为请求体参数类型：`addBook(book: Book, ...)`。该类型不是有效的 Pydantic 请求模型，FastAPI 在注册接口时抛出 `Invalid args for response field`，导致整个应用导入失败。
+直接导入模块发现，新增接口将 SQLAlchemy ORM 类 `Book` 作为请求体参数类型：`add_book(book: Book, ...)`。该类型不是有效的 Pydantic 请求模型，FastAPI 在注册接口时抛出 `Invalid args for response field`，导致整个应用导入失败。
 
 ### 解决方法与验证
 

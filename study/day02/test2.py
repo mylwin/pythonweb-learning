@@ -21,9 +21,9 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # ORM 建表流程
 #  1.创建数据库引擎
-ASYNC_DATEBASE_URL = "mysql+aiomysql://root:123456@127.0.0.1:3306/python_web_study"
-asyncEngine: AsyncEngine = create_async_engine(
-    ASYNC_DATEBASE_URL,
+ASYNC_DATABASE_URL = "mysql+aiomysql://root:123456@127.0.0.1:3306/python_web_study"
+async_engine: AsyncEngine = create_async_engine(
+    ASYNC_DATABASE_URL,
     echo=True,  # 输出 SQL 日志
     pool_size=10,  # 连接池大小
     max_overflow=20,  # 连接池溢出时最大连接数
@@ -33,14 +33,18 @@ asyncEngine: AsyncEngine = create_async_engine(
 # 2.定义模型类
 # 2.1 创建基类
 class Base(DeclarativeBase):
-    createTime: Mapped[datetime] = mapped_column(
+    # 数据库列名保持 createTime / updateTime 不变，避免已有表和 Mock SQL 失效；
+    # Python 属性按 PEP 8 使用 snake_case。
+    create_time: Mapped[datetime] = mapped_column(
+        "createTime",
         DateTime,
         server_default=func.now(),  # 服务器默认时间
         default=datetime.now,
         nullable=False,
         comment="创建时间",
     )
-    updateTime: Mapped[datetime] = mapped_column(
+    update_time: Mapped[datetime] = mapped_column(
+        "updateTime",
         DateTime,
         server_default=func.now(),  # 服务器默认时间
         default=datetime.now,
@@ -79,18 +83,18 @@ class Book(Base):
 
 # 3.创建数据库表
 # 3.1 从连接池获取异步链接，开启事务，执行 ORM 操作
-async def createTables():
-    async with asyncEngine.begin() as conn:
+async def create_tables():
+    async with async_engine.begin() as conn:
         # 获取 ORM 模型对应的 Table 对象
-        bookTable = Book.__table__
-        userTable = User.__table__
+        book_table = Book.__table__
+        user_table = User.__table__
 
         # 显示断言，让 Pylance 知道 __table__ 就是 Table
-        assert isinstance(bookTable, Table)
-        assert isinstance(userTable, Table)
+        assert isinstance(book_table, Table)
+        assert isinstance(user_table, Table)
 
         # 创建指定的数据表
-        await conn.run_sync(Base.metadata.create_all, tables=[bookTable, userTable])
+        await conn.run_sync(Base.metadata.create_all, tables=[book_table, user_table])
 
 
 # 3.2 FastAPI 启动时创建数据库表
@@ -102,11 +106,11 @@ async def lifespan(app: FastAPI):
     - 关闭时关闭数据库连接池
     """
     # 创建数据库表
-    await createTables()
+    await create_tables()
     # 启动时 yield 后面的代码
     yield
     # 关闭数据库连接池
-    await asyncEngine.dispose()
+    await async_engine.dispose()
 
 
 # 创建 FastAPI 对象
@@ -142,16 +146,16 @@ class User(Base):
 
 # 使用 ORM
 # 1.创建异步会话工厂
-AsyncSessionLocalFactory: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    bind=asyncEngine,  # 绑定数据库引擎
+async_session_local_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    bind=async_engine,  # 绑定数据库引擎
     class_=AsyncSession,  # 使用异步会话
     expire_on_commit=False,  # 不自动提交
 )
 
 
 # 2.依赖项
-async def getDataBase():
-    async with AsyncSessionLocalFactory() as session:
+async def get_database():
+    async with async_session_local_factory() as session:
         try:
             yield session  # 把会话返回给调用方
             await session.commit()  # 提交会话
@@ -165,42 +169,42 @@ async def getDataBase():
 # 3.接口
 # 3.1 查询
 @app.get("/book/books")
-async def getBookList(db: Annotated[AsyncSession, Depends(getDataBase)]):
+async def get_book_list(db: Annotated[AsyncSession, Depends(get_database)]):
     result: Result = await db.execute(select(Book))
-    user = result.scalars().all()
-    return user
+    books = result.scalars().all()
+    return books
 
 
 # 3.2 聚合查询
 @app.get("/book/summary")
-async def getBooksCount(db: Annotated[AsyncSession, Depends(getDataBase)]):
+async def get_books_count(db: Annotated[AsyncSession, Depends(get_database)]):
     # 获取图书数量
-    bookCountResult: Result = await db.execute(select(func.count(Book.id)))
-    bookCount = bookCountResult.scalar()
+    book_count_result: Result = await db.execute(select(func.count(Book.id)))
+    book_count = book_count_result.scalar()
 
     # 获取图书最高 最低 平均价格
-    bookLowestPriceResult: Result = await db.execute(select(func.min(Book.price)))
-    bookHighestPriceResult: Result = await db.execute(select(func.max(Book.price)))
-    bookAveragePriceResult: Result = await db.execute(select(func.avg(Book.price)))
-    bookLowestPrice = bookLowestPriceResult.scalar()
-    bookHighestPrice = bookHighestPriceResult.scalar()
-    bookAveragePrice = bookAveragePriceResult.scalar()
+    book_lowest_price_result: Result = await db.execute(select(func.min(Book.price)))
+    book_highest_price_result: Result = await db.execute(select(func.max(Book.price)))
+    book_average_price_result: Result = await db.execute(select(func.avg(Book.price)))
+    book_lowest_price = book_lowest_price_result.scalar()
+    book_highest_price = book_highest_price_result.scalar()
+    book_average_price = book_average_price_result.scalar()
 
     # 返回
     return {
-        "图书数量：": bookCount,
-        "图书最低价格：": bookLowestPrice,
-        "图书最高价格：": bookHighestPrice,
-        "图书平均价格：": bookAveragePrice,
+        "图书数量：": book_count,
+        "图书最低价格：": book_lowest_price,
+        "图书最高价格：": book_highest_price,
+        "图书平均价格：": book_average_price,
     }
 
 
 # 3.3 比较判断
 # int 路径转换器在匹配阶段限制编号，避免拦截 summary、pagination 等固定路径。
 @app.get("/book/{id:int}")
-async def getBookById(
+async def get_book_by_id(
     id: Annotated[int, Path(title="图书编号", description="图书编号", nullable=False)],
-    db: Annotated[AsyncSession, Depends(getDataBase)],
+    db: Annotated[AsyncSession, Depends(get_database)],
 ):
     result: Result = await db.execute(select(Book).where(Book.id == id))
     book = result.scalars().one_or_none
@@ -209,7 +213,7 @@ async def getBookById(
 
 # 3.4 模糊查询
 @app.get("/book")
-async def getBooksByName(
+async def get_books_by_name(
     name: Annotated[
         str,
         Query(
@@ -219,7 +223,7 @@ async def getBooksByName(
             max_length=20,
         ),
     ],
-    db: Annotated[AsyncSession, Depends(getDataBase)],
+    db: Annotated[AsyncSession, Depends(get_database)],
 ):
     result: Result = await db.execute(
         select(Book).where(Book.name.ilike(f"%{escape_like(name)}%", escape="\\"))
@@ -228,22 +232,22 @@ async def getBooksByName(
     return books
 
 
-def escape_like(s: str) -> str:
+def escape_like(value: str) -> str:
     """把 LIKE 里的通配符转义成普通字符。"""
-    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 # 3.5 分页查询
 @app.get("/book/pagination")
-async def getBookPages(
+async def get_book_pages(
     page: Annotated[int, Query(title="页码", ge=1)],
     size: Annotated[int, Query(title="每页数量", ge=1)],
-    db: Annotated[AsyncSession, Depends(getDataBase)],
+    db: Annotated[AsyncSession, Depends(get_database)],
 ):
     # 跳过的数据
     skip = (page - 1) * size
-    queryResult: Result = await db.execute(select(Book).offset(skip).limit(size))
-    books = queryResult.scalars().all()
+    query_result: Result = await db.execute(select(Book).offset(skip).limit(size))
+    books = query_result.scalars().all()
     return {"data": books}
 
 
@@ -257,53 +261,53 @@ class BookCreate(BaseModel):
 
 
 @app.post("/book/add_book")
-async def addBook(book: BookCreate, db: Annotated[AsyncSession, Depends(getDataBase)]):
+async def add_book(book: BookCreate, db: Annotated[AsyncSession, Depends(get_database)]):
     # 获取 book 的参数
-    bookParams = Book(**book.model_dump())
-    db.add(bookParams)
+    book_params = Book(**book.model_dump())
+    db.add(book_params)
     await db.commit()
-    return bookParams
+    return book_params
 
 
 # 3.7 更新操作
 @app.put("/book/update_book/{id}")
-async def updateBook(
+async def update_book(
     id: Annotated[int, Path(title="图书编号", nullable=False)],
     book: BookCreate,
-    db: Annotated[AsyncSession, Depends(getDataBase)],
+    db: Annotated[AsyncSession, Depends(get_database)],
 ):
     # 1.查询数据
-    oldBook = await db.get(Book, id)
-    if oldBook is None:
+    old_book = await db.get(Book, id)
+    if old_book is None:
         raise HTTPException(status_code=404, detail="图书不存在")
 
     # 2.修改
-    oldBook.name = book.name
-    oldBook.author = book.author
-    oldBook.price = book.price
+    old_book.name = book.name
+    old_book.author = book.author
+    old_book.price = book.price
 
     # 3.提交
     await db.commit()
-    return oldBook
+    return old_book
 
 
 # 3.8 删除操作
 @app.delete("/books/delete_book/{id}")
-async def deleteBook(
+async def delete_book(
     id: Annotated[int, Path(title="图书编号", nullable=False)],
-    db: Annotated[AsyncSession, Depends(getDataBase)],
+    db: Annotated[AsyncSession, Depends(get_database)],
 ):
     # 1.查询
-    oldBook = await db.get(Book, id)
-    if oldBook is None:
+    old_book = await db.get(Book, id)
+    if old_book is None:
         raise HTTPException(status_code=404, detail="图书不存在")
 
     # 2.删除
-    await db.delete(oldBook)
+    await db.delete(old_book)
     await db.commit()
 
     # 3.返回
-    return {"message": f"删除成功: {oldBook.name}"}
+    return {"message": f"删除成功: {old_book.name}"}
 
 
 # 执行测试
