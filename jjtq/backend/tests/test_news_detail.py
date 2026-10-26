@@ -6,9 +6,9 @@ from unittest.mock import patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from jjtq.backend.config.db_config import get_db
+from jjtq.backend.config.database import get_db
 from jjtq.backend.main import app
-from jjtq.backend.models.news_model import News
+from jjtq.backend.models.news import News
 
 
 class AsyncTestSession:
@@ -106,7 +106,7 @@ class NewsDetailTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_failed_query_rolls_back_views(self):
         with patch(
-            "jjtq.backend.services.news_service.get_related_news",
+            "jjtq.backend.services.news.news_crud.get_related_news",
             side_effect=RuntimeError("查询失败"),
         ):
             with self.assertRaises(RuntimeError):

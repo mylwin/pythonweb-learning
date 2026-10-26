@@ -9,8 +9,8 @@ class CategoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    created_at: datetime = Field(validation_alias="create_time")
-    updated_at: datetime = Field(validation_alias="update_time")
+    created_at: datetime
+    updated_at: datetime
     name: str
     sort_order: int
 

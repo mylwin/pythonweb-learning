@@ -1,7 +1,7 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jjtq.backend.models.news_model import Category, News
+from jjtq.backend.models.news import Category, News
 
 
 # 获取新闻分类列表
@@ -19,14 +19,14 @@ async def get_categories(
 
 
 # 获取新闻列表
-async def get_news(
+async def get_news_list(
     db: AsyncSession,
     page: int = 1,
-    pageSize: int = 10,
+    page_size: int = 10,
     category_id: int | None = None,
 ) -> list[News]:
     # 计算分页数据
-    skip = (page - 1) * pageSize
+    skip = (page - 1) * page_size
     statement = select(News)
     # 如果存在分类ID，则添加分类ID的筛选条件
     if category_id is not None:
@@ -34,13 +34,13 @@ async def get_news(
     result = await db.execute(
         statement.order_by(News.publish_time.desc(), News.id.desc())
         .offset(skip)
-        .limit(pageSize)
+        .limit(page_size)
     )
     return list(result.scalars().all())
 
 
 # 获取新闻详情
-async def get_detail(db: AsyncSession, news_id: int) -> News | None:
+async def get_news_detail(db: AsyncSession, news_id: int) -> News | None:
     # 查询当前新闻详情
     news_detail = await db.execute(select(News).where(News.id == news_id))
     return news_detail.scalar_one_or_none()

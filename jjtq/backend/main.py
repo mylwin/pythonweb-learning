@@ -8,13 +8,13 @@ if not __package__:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from jjtq.backend.routers import news_routers
+from jjtq.backend.routers import news
 
 # 创建 app 实例
 app = FastAPI(title="掘金头条")
 
 # 绑定路由
-app.include_router(news_routers.router)
+app.include_router(news.router)
 
 # 解决跨域问题
 origins = ["http://localhost:5173", "http://localhost:3000"]

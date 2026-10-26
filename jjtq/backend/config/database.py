@@ -1,12 +1,13 @@
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 
 # 数据库设置
 class Settings(BaseSettings):
-    ASYNC_DATABASE_URL: str
+    async_database_url: str = Field(validation_alias="ASYNC_DATABASE_URL")
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[1] / ".env"
     )
@@ -18,7 +19,7 @@ settings = Settings()  # type: ignore
 
 # 创建异步引擎
 async_engine = create_async_engine(
-    settings.ASYNC_DATABASE_URL,
+    settings.async_database_url,
     echo=True,  # 输出 SQL 日志
     pool_size=10,  # 连接池大小
     max_overflow=20,  # 连接池溢出时最大连接数
@@ -27,16 +28,16 @@ async_engine = create_async_engine(
     connect_args={"connect_timeout": 10},  # 连接超时时间
 )
 
-AsyncSessionLocal = async_sessionmaker(
+async_session_factory = async_sessionmaker(
     bind=async_engine,
     class_=AsyncSession,
-    expire_on_commit=False,  # 不自动提交
+    expire_on_commit=False,  # 提交后保留已加载的属性
 )
 
 
 # 依赖项，获取数据库异步会话
 async def get_db():
-    async with AsyncSessionLocal() as session:
+    async with async_session_factory() as session:
         try:
             yield session
             await session.commit()
