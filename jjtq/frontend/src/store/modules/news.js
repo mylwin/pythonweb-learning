@@ -39,6 +39,7 @@ export const useNewsStore = defineStore('news', {
     refreshing: false,
     finished: false,
     categoriesLoading: false,
+    detailRequestId: 0,
     error: '',
   }),
 
@@ -119,17 +120,25 @@ export const useNewsStore = defineStore('news', {
     },
 
     async getNewsDetail(id) {
+      const requestId = ++this.detailRequestId
       this.newsDetail = {}
       this.error = ''
 
       try {
         const data = await newsApi.getNewsDetail(id)
         // 防止快速切换详情时旧请求覆盖新数据
-        if (Number(data?.id ?? id) === Number(id)) {
-          this.newsDetail = data || {}
+        if (requestId !== this.detailRequestId) {
+          return { success: false, stale: true }
         }
+        if (!data || Number(data.id) !== Number(id)) {
+          throw new Error('新闻详情数据不匹配')
+        }
+        this.newsDetail = data
         return { success: true }
       } catch (error) {
+        if (requestId !== this.detailRequestId) {
+          return { success: false, stale: true }
+        }
         this.error = error.message || '获取新闻详情失败'
         return { success: false, message: this.error }
       }

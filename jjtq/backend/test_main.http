@@ -1,0 +1,14 @@
+### 获取新闻分类列表（默认分页）
+GET http://127.0.0.1:8000/api/news/categories
+
+### 获取新闻分类列表（指定分页）
+GET http://127.0.0.1:8000/api/news/categories?skip=0&limit=10
+
+### 获取新闻详情（每次成功请求浏览量 +1）
+GET http://127.0.0.1:8000/api/news/detail?id=1
+
+### 新闻不存在：HTTP 404
+GET http://127.0.0.1:8000/api/news/detail?id=2147483647
+
+### 非法新闻编号：HTTP 422
+GET http://127.0.0.1:8000/api/news/detail?id=0

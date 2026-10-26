@@ -44,7 +44,7 @@
             :key="item.id"
             @click="goToRelatedNews(item.id)"
           >
-            <div class="related-image">
+            <div class="related-image" v-if="item.image">
               <img :src="item.image" :alt="item.title">
             </div>
             <div class="related-title">{{ item.title }}</div>
@@ -85,7 +85,7 @@ const emptyText = computed(() => {
 // 将内容拆分为段落
 const contentParagraphs = computed(() => {
   if (!newsStore.newsDetail.content) return []
-  return newsStore.newsDetail.content.split('\n\n').filter((paragraph) => paragraph.trim())
+  return newsStore.newsDetail.content.split(/\r?\n+/).filter((paragraph) => paragraph.trim())
 })
 
 // 判断当前新闻是否已收藏
@@ -116,10 +116,9 @@ const syncFavoriteState = async (detail) => {
 }
 
 const loadDetail = async (id) => {
-  if (!id) return
-
   loading.value = true
   const result = await newsStore.getNewsDetail(id)
+  if (result.stale || id !== newsId.value) return
   loading.value = false
 
   if (!result.success) return
