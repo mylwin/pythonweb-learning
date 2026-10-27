@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jjtq.backend.crud import users as users_crud
 from jjtq.backend.models.users import User
 from jjtq.backend.schemas.users import (
-    UserLoginInfoData,
     UserLoginData,
+    UserLoginInfoData,
     UserProfileUpdateData,
-    UserRegisterInfoData,
     UserRegisterData,
+    UserRegisterInfoData,
     UserUpdateRequest,
 )
 from jjtq.backend.utils.errors import BusinessError
@@ -62,9 +62,7 @@ async def register_user(
     )
 
 
-async def login_user(
-    db: AsyncSession, username: str, password: str
-) -> UserLoginData:
+async def login_user(db: AsyncSession, username: str, password: str) -> UserLoginData:
     """
     用户登录并生成登录 token。
 
