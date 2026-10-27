@@ -16,8 +16,8 @@ class UserRegisterRequest(BaseModel):
         return value
 
 
-class UserInfo(BaseModel):
-    """用户信息模型"""
+class UserInfoResponse(BaseModel):
+    """用户信息响应模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -27,16 +27,10 @@ class UserInfo(BaseModel):
     avatar: str | None = None
 
 
-class UserRegisterData(BaseModel):
-    """用户注册数据，接口使用驼峰字段名"""
+class UserAuthResponse(BaseModel):
+    """用户认证数据，接口使用驼峰字段名"""
+
+    model_config = ConfigDict(from_attributes=True)
 
     token: str
-    user_info: UserInfo = Field(serialization_alias="userInfo")
-
-
-class UserRegisterResponse(BaseModel):
-    """用户注册接口响应模型"""
-
-    code: int = 200
-    message: str = "success"
-    data: UserRegisterData
+    user_info: UserInfoResponse = Field(serialization_alias="userInfo")

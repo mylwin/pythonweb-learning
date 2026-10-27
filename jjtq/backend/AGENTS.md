@@ -11,6 +11,7 @@
 - `crud/`：数据库查询和写入，不处理 HTTP 响应。
 - `services/`：跨查询的业务编排，例如详情查询、浏览量更新和推荐组合。
 - `routers/`：路由声明、参数校验、依赖注入和 HTTP 响应。
+- `utils/`：跨模块复用的工具；`response.py` 提供统一的成功与错误响应。
 - `tests/`：`test_*.py` 自动化测试和按业务命名的 `.http` 请求示例。
 - Python 包目录保留 `__init__.py`；只在需要公开包接口时添加导出。
 - 同一业务在各层使用相同文件名，如 `models/news.py`、`crud/news.py`。

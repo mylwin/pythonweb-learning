@@ -76,7 +76,7 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(body["code"], 200)
-        self.assertEqual(body["message"], "success")
+        self.assertEqual(body["message"], "注册成功")
         data = body["data"]
         self.assertEqual(set(data), {"token", "userInfo"})
         self.assertEqual(len(data["token"]), 32)

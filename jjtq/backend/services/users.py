@@ -4,13 +4,13 @@ import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jjtq.backend.crud import users as users_crud
-from jjtq.backend.schemas.users import UserInfo, UserRegisterData
+from jjtq.backend.schemas.users import UserAuthResponse, UserInfoResponse
 
 
 # 用户注册：用户名已存在时返回 None
 async def register_user(
     db: AsyncSession, username: str, password: str
-) -> UserRegisterData | None:
+) -> UserAuthResponse | None:
     if await users_crud.get_user_by_username(db, username) is not None:
         return None
 
@@ -22,7 +22,7 @@ async def register_user(
 
     # 生成随机 token
     token: str = uuid.uuid4().hex
-    return UserRegisterData(
+    return UserAuthResponse(
         token=token,
-        user_info=UserInfo.model_validate(user),
+        user_info=UserInfoResponse.model_validate(user),
     )
