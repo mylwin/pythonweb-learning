@@ -1,0 +1,26 @@
+### 用户注册（成功）
+POST http://127.0.0.1:8000/api/user/register
+Content-Type: application/json
+
+{
+  "username": "jjtq",
+  "password": "123456"
+}
+
+### 用户名已存在：HTTP 409
+POST http://127.0.0.1:8000/api/user/register
+Content-Type: application/json
+
+{
+  "username": "jjtq",
+  "password": "123456"
+}
+
+### 参数校验失败：HTTP 422
+POST http://127.0.0.1:8000/api/user/register
+Content-Type: application/json
+
+{
+  "username": "j",
+  "password": "123"
+}

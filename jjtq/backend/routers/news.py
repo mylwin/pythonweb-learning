@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from jjtq.backend.crud import news as news_crud
 from jjtq.backend.config.database import get_db
+from jjtq.backend.crud import news as news_crud
 from jjtq.backend.schemas.news import CategoryListResponse, NewsDetailResponse
 from jjtq.backend.services import news as news_service
 
