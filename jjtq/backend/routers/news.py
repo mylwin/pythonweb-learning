@@ -7,7 +7,7 @@ from jjtq.backend.config.database import get_db
 from jjtq.backend.crud import news as news_crud
 from jjtq.backend.schemas.news import CategoryListResponse, NewsDetailResponse
 from jjtq.backend.services import news as news_service
-from jjtq.backend.utils.response import error_response, success_response
+from jjtq.backend.utils.response import success_response
 
 # 创建 router 实例
 router = APIRouter(prefix="/api/news", tags=["news"])
@@ -66,6 +66,4 @@ async def get_news_detail(
     :return: 统一成功响应；新闻不存在时返回 404 错误响应
     """
     news_detail = await news_service.get_news_detail(db, news_id)
-    if news_detail is None:
-        return error_response(404, "新闻不存在")
     return success_response(data=news_detail)
