@@ -72,6 +72,33 @@ class UserUpdateRequest(BaseModel):
         return self
 
 
+class UserChangePasswordRequest(BaseModel):
+    """用户修改密码请求模型"""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    old_password: str = Field(
+        alias="oldPassword", min_length=6, max_length=72, description="旧密码"
+    )
+    new_password: str = Field(
+        alias="newPassword", min_length=6, max_length=72, description="新密码"
+    )
+
+    @field_validator("old_password", "new_password")
+    @classmethod
+    def validate_password_bytes(cls, value: str) -> str:
+        """
+        校验密码是否超过 bcrypt 的 72 字节上限。
+
+        :param value: 原始密码
+        :return: 校验通过的密码
+        :raises ValueError: 密码 UTF-8 编码后超过 72 字节
+        """
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("密码长度不能超过 72 字节")
+        return value
+
+
 class UserRegisterInfoResponse(BaseModel):
     """用户注册信息响应模型"""
 

@@ -60,3 +60,13 @@ Content-Type: application/json
 
 ### 未携带令牌：HTTP 401
 GET http://127.0.0.1:8000/api/user/info
+
+### 修改当前用户密码（成功后令牌失效，需要重新登录）
+PUT http://127.0.0.1:8000/api/user/password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "oldPassword": "123456",
+  "newPassword": "newpassword123"
+}

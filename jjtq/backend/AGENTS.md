@@ -49,6 +49,9 @@
 - 响应中的 `publishTime`、`categoryId`、`relatedNews` 使用 Schema
   序列化别名；分类接口现有的 `created_at` 等字段保持原样。
 - 成功响应沿用 `code`、`message`、`data`；错误同时使用正确的 HTTP 状态码。
+- Service 遇到业务失败时抛出 `utils/errors.py` 中的 `BusinessError`，由
+  全局异常处理器调用 `error_response`；数据库异常等非业务错误继续向外抛出。
+  框架的参数校验和 HTTP 异常继续由各自的全局处理器处理。
 - SQLAlchemy 模型应对应实际数据库表和列，命名整理不得擅自改表结构。
 - 数据库访问使用异步会话；调用异步函数必须 `await`。
 - 事务由 `get_db` 统一提交和回滚；CRUD 与 Service 不单独提交。

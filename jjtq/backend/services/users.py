@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +13,7 @@ from jjtq.backend.schemas.users import (
     UserRegisterResponse,
     UserUpdateRequest,
 )
+from jjtq.backend.utils.errors import BusinessError
 from jjtq.backend.utils.security import (
     create_token,
     hash_password,
@@ -39,17 +39,18 @@ async def issue_token(db: AsyncSession, user_id: int) -> str:
 
 async def register_user(
     db: AsyncSession, username: str, password: str
-) -> UserRegisterResponse | None:
+) -> UserRegisterResponse:
     """
     注册用户并生成登录 token。
 
     :param db: 数据库异步会话
     :param username: 用户名
     :param password: 待哈希的明文密码
-    :return: 认证数据；用户名已存在时返回 None
+    :return: 注册成功的认证数据
+    :raises BusinessError: 用户名已存在
     """
     if await users_crud.get_user_by_username(db, username) is not None:
-        return None
+        raise BusinessError(409, "用户名已存在")
 
     password_hash = await hash_password(password)
     user = await users_crud.create_user(db, username, password_hash)
@@ -63,18 +64,27 @@ async def register_user(
 
 async def login_user(
     db: AsyncSession, username: str, password: str
-) -> UserLoginResponse | None:
+) -> UserLoginResponse:
     """
     用户登录并生成登录 token。
 
     :param db: 数据库异步会话
     :param username: 用户名
     :param password: 待验证的明文密码
-    :return: 认证数据；用户不存在或密码错误时返回 None
+    :return: 登录成功的认证数据
+    :raises BusinessError: 用户不存在、密码错误或登录期间密码发生变化
     """
     user = await users_crud.get_user_by_username(db, username)
-    if user is None or not await verify_password(password, user.password):
-        return None
+    if user is None:
+        raise BusinessError(401, "用户不存在或密码错误")
+    verified_hash = user.password
+    if not await verify_password(password, verified_hash):
+        raise BusinessError(401, "用户不存在或密码错误")
+
+    # 密码变更与签发令牌竞争时，锁定用户并确认验证过的哈希仍然有效。
+    user = await users_crud.get_user_for_update(db, user.id)
+    if user is None or user.password != verified_hash:
+        raise BusinessError(401, "用户不存在或密码错误")
 
     token = await issue_token(db, user.id)
     return UserLoginResponse(
@@ -93,7 +103,7 @@ async def update_user_info(
     :param user: 已认证的用户对象
     :param payload: 要更新的用户资料
     :return: 更新后的用户资料
-    :raises HTTPException: 手机号已被其他用户使用
+    :raises BusinessError: 手机号已被其他用户使用
     """
     # model_dump 忽略未设置字段，留下要更新的字段
     fields = payload.model_dump(exclude_unset=True)
@@ -109,6 +119,35 @@ async def update_user_info(
             "unique constraint failed: user.phone" in str(original).lower()
         )
         if fields.get("phone") is not None and (is_duplicate or is_phone_unique):
-            raise HTTPException(status_code=409, detail="手机号已被使用") from error
+            raise BusinessError(409, "手机号已被使用") from error
         raise
     return UserProfileUpdateResponse.model_validate(updated_user)
+
+
+async def update_user_password(
+    db: AsyncSession,
+    current_user: User,
+    old_password: str,
+    new_password: str,
+) -> None:
+    """
+    更新当前用户的密码。
+
+    :param db: 数据库异步会话
+    :param current_user: 已认证的用户
+    :param old_password: 用户的旧密码
+    :param new_password: 用户的新密码
+    :raises BusinessError: 旧密码错误、密码未变化或密码已被并发修改
+    """
+    if not await verify_password(old_password, current_user.password):
+        raise BusinessError(400, "旧密码错误")
+    if old_password == new_password:
+        raise BusinessError(400, "新密码不能与旧密码相同")
+    new_password_hash = await hash_password(new_password)
+    updated = await users_crud.update_user_password(
+        db, current_user.id, current_user.password, new_password_hash
+    )
+    if not updated:
+        raise BusinessError(409, "密码已发生变化，请重新登录")
+    # 密码更新和令牌撤销共用事务，失败时统一回滚。
+    await users_crud.delete_user_tokens(db, current_user.id)

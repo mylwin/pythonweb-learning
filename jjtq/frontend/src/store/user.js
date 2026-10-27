@@ -97,8 +97,10 @@ export const useUserStore = defineStore('user', {
 
       try {
         await authApi.updatePassword(oldPassword, newPassword)
-        return { success: true, message: '密码修改成功' }
+        this.logout()
+        return { success: true, message: '密码修改成功，请重新登录' }
       } catch (error) {
+        if (error.isAuthError) this.logout()
         return { success: false, message: error.message || '密码修改失败' }
       }
     },

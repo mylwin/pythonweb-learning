@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from jjtq.backend.utils.errors import BusinessError
 from jjtq.backend.utils.response import error_response
 
 
@@ -20,6 +21,8 @@ def validation_error_message(error: dict) -> str:
     # 字段名称
     field_name = {
         "username": "用户名", "password": "密码", "nickname": "昵称",
+        "oldPassword": "旧密码", "newPassword": "新密码",
+        "old_password": "旧密码", "new_password": "新密码",
         "avatar": "头像", "gender": "性别", "phone": "手机号", "bio": "简介",
     }.get(field_key, "该字段")
     error_type = error.get("type")
@@ -49,6 +52,19 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     :param app: FastAPI 应用实例
     """
+
+    @app.exception_handler(BusinessError)
+    async def business_exception_handler(
+        request: Request, exc: BusinessError
+    ) -> JSONResponse:
+        """
+        将业务异常转换为统一错误响应。
+
+        :param request: 当前请求
+        :param exc: 业务异常
+        :return: 统一错误响应
+        """
+        return error_response(exc.status_code, exc.message)
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(

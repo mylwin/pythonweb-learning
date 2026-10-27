@@ -8,11 +8,12 @@ from jjtq.backend.dependencies.auth import get_current_user
 from jjtq.backend.models.users import User
 from jjtq.backend.schemas.users import (
     UserAuthRequest,
+    UserChangePasswordRequest,
     UserLoginInfoResponse,
     UserUpdateRequest,
 )
 from jjtq.backend.services import users as users_service
-from jjtq.backend.utils.response import error_response, success_response
+from jjtq.backend.utils.response import success_response
 
 # 创建 router 实例
 router = APIRouter(prefix="/api/user", tags=["users"])
@@ -33,8 +34,6 @@ async def register_user(
     register_data = await users_service.register_user(
         db, payload.username, payload.password
     )
-    if register_data is None:
-        return error_response(409, "用户名已存在")
     return success_response(message="注册成功", data=register_data)
 
 
@@ -51,8 +50,6 @@ async def login_user(
     :return: 统一成功响应；用户不存在或密码错误时返回 401 错误响应
     """
     login_data = await users_service.login_user(db, payload.username, payload.password)
-    if login_data is None:
-        return error_response(401, "用户不存在或密码错误")
     return success_response(message="登录成功", data=login_data)
 
 
@@ -85,3 +82,23 @@ async def update_current_user_info(
     """
     user = await users_service.update_user_info(db, current_user, payload)
     return success_response(message="用户信息更新成功", data=user)
+
+
+@router.put("/password")
+async def update_current_user_password(
+    payload: UserChangePasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    更新当前登录用户的密码。
+
+    :param db: 数据库异步会话
+    :param current_user: 当前已登录的用户
+    :param payload: 旧密码和新密码
+    :return: 统一成功响应
+    """
+    await users_service.update_user_password(
+        db, current_user, payload.old_password, payload.new_password
+    )
+    return success_response(message="密码更新成功，请重新登录", data=None)

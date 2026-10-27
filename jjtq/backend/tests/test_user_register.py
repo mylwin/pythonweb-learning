@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from jjtq.backend.config.database import get_db
 from jjtq.backend.main import app
 from jjtq.backend.models.users import User, UserToken
+from jjtq.backend.utils.errors import BusinessError
 from jjtq.backend.utils.security import hash_token
 
 
@@ -318,6 +319,118 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
         bob_user = self.session.scalars(select(User).where(User.username == "bob")).one()
         self.assertIsNone(bob_user.phone)
         self.assertEqual(bob_user.bio, "这个人很懒，什么都没留下")
+
+    async def test_change_password_revokes_only_current_users_tokens(self):
+        _, alice = await self.request({"username": "alice", "password": "secret123"})
+        _, alice_login = await self.request(
+            {"username": "alice", "password": "secret123"}, path="/api/user/login"
+        )
+        _, bob = await self.request({"username": "bob", "password": "secret123"})
+        alice_tokens = [alice["data"]["token"], alice_login["data"]["token"]]
+        status, body = await self.request(
+            {"oldPassword": "secret123", "newPassword": "new!password"},
+            path="/api/user/password", method="PUT", token=f"Bearer {alice_tokens[0]}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body["message"], "密码更新成功，请重新登录")
+        for token in alice_tokens:
+            status, _ = await self.request(path="/api/user/info", method="GET", token=f"Bearer {token}")
+            self.assertEqual(status, 401)
+        status, _ = await self.request(
+            path="/api/user/info", method="GET", token=f"Bearer {bob['data']['token']}"
+        )
+        self.assertEqual(status, 200)
+        status, _ = await self.request(
+            {"username": "alice", "password": "secret123"}, path="/api/user/login"
+        )
+        self.assertEqual(status, 401)
+        status, _ = await self.request(
+            {"username": "alice", "password": "new!password"}, path="/api/user/login"
+        )
+        self.assertEqual(status, 200)
+        status, _ = await self.request(
+            {"username": "bob", "password": "secret123"}, path="/api/user/login"
+        )
+        self.assertEqual(status, 200)
+
+    async def test_change_password_rejects_invalid_requests_without_revoking_tokens(self):
+        _, user = await self.request({"username": "alice", "password": "secret123"})
+        header = f"Bearer {user['data']['token']}"
+        for payload, expected_status, expected_message in (
+            ({"oldPassword": "wrong123", "newPassword": "newpassword"}, 400, "旧密码错误"),
+            ({"oldPassword": "secret123", "newPassword": "secret123"}, 400, "新密码不能与旧密码相同"),
+            ({"oldPassword": "secret123", "newPassword": "12345"}, 422, "请求参数校验失败"),
+            ({"oldPassword": "secret123", "newPassword": "密" * 30}, 422, "请求参数校验失败"),
+            ({"oldPassword": "secret123"}, 422, "请求参数校验失败"),
+        ):
+            status, body = await self.request(payload, path="/api/user/password", method="PUT", token=header)
+            self.assertEqual((status, body["message"]), (expected_status, expected_message))
+            for password in payload.values():
+                self.assertNotIn(password, json.dumps(body, ensure_ascii=False))
+        status, _ = await self.request(path="/api/user/info", method="GET", token=header)
+        self.assertEqual(status, 200)
+        status, _ = await self.request(
+            {"oldPassword": "secret123", "newPassword": "newpassword"},
+            path="/api/user/password", method="PUT",
+        )
+        self.assertEqual(status, 401)
+
+    async def test_change_password_rolls_back_if_token_revocation_fails(self):
+        _, user = await self.request({"username": "alice", "password": "secret123"})
+        header = f"Bearer {user['data']['token']}"
+        with patch("jjtq.backend.services.users.users_crud.delete_user_tokens", side_effect=RuntimeError("写入失败")):
+            with self.assertRaises(RuntimeError):
+                await self.request(
+                    {"oldPassword": "secret123", "newPassword": "newpassword"},
+                    path="/api/user/password", method="PUT", token=header,
+                )
+        self.session.expire_all()
+        self.assertTrue(bcrypt.checkpw(b"secret123", self.session.scalars(select(User.password)).one().encode()))
+        status, _ = await self.request(path="/api/user/info", method="GET", token=header)
+        self.assertEqual(status, 200)
+
+    async def test_business_error_rolls_back_and_returns_unified_response(self):
+        _, user = await self.request({"username": "alice", "password": "secret123"})
+        header = f"Bearer {user['data']['token']}"
+        with patch(
+            "jjtq.backend.services.users.users_crud.delete_user_tokens",
+            side_effect=BusinessError(409, "撤销令牌失败"),
+        ):
+            status, body = await self.request(
+                {"oldPassword": "secret123", "newPassword": "newpassword"},
+                path="/api/user/password", method="PUT", token=header,
+            )
+        self.assertEqual(status, 409)
+        self.assertEqual(body, {"code": 409, "message": "撤销令牌失败", "data": None})
+        self.session.expire_all()
+        stored_password = self.session.scalars(select(User.password)).one()
+        self.assertTrue(bcrypt.checkpw(b"secret123", stored_password.encode()))
+        status, _ = await self.request(path="/api/user/info", method="GET", token=header)
+        self.assertEqual(status, 200)
+
+    async def test_change_password_detects_concurrent_change(self):
+        _, user = await self.request({"username": "alice", "password": "secret123"})
+        header = f"Bearer {user['data']['token']}"
+        with patch("jjtq.backend.services.users.users_crud.update_user_password", return_value=False):
+            status, body = await self.request(
+                {"oldPassword": "secret123", "newPassword": "newpassword"},
+                path="/api/user/password", method="PUT", token=header,
+            )
+        self.assertEqual(status, 409)
+        self.assertEqual(body["message"], "密码已发生变化，请重新登录")
+        status, _ = await self.request(path="/api/user/info", method="GET", token=header)
+        self.assertEqual(status, 200)
+
+    async def test_login_rejects_password_changed_before_token_issue(self):
+        await self.request({"username": "alice", "password": "secret123"})
+        token_count = self.session.scalar(select(func.count()).select_from(UserToken))
+        with patch("jjtq.backend.services.users.users_crud.get_user_for_update") as get_locked_user:
+            get_locked_user.return_value = User(username="alice", password="changed-hash")
+            status, _ = await self.request(
+                {"username": "alice", "password": "secret123"}, path="/api/user/login"
+            )
+        self.assertEqual(status, 401)
+        self.assertEqual(self.session.scalar(select(func.count()).select_from(UserToken)), token_count)
 
 
 if __name__ == "__main__":

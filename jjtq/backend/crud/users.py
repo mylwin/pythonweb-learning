@@ -1,6 +1,8 @@
 from datetime import timedelta
+from typing import Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jjtq.backend.models.users import User, UserToken
@@ -15,6 +17,23 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
     :return: 用户对象，不存在时返回 None
     """
     result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
+
+
+async def get_user_for_update(db: AsyncSession, user_id: int) -> User | None:
+    """
+    锁定并重新读取用户，以便校验密码状态后签发令牌。
+
+    :param db: 数据库异步会话
+    :param user_id: 用户 ID
+    :return: 最新的用户对象；不存在时返回 None
+    """
+    result = await db.execute(
+        select(User)
+        .where(User.id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     return result.scalar_one_or_none()
 
 
@@ -91,3 +110,38 @@ async def update_user_info(
         setattr(user, field, value)
     await db.flush()
     return user
+
+
+async def update_user_password(
+    db: AsyncSession,
+    user_id: int,
+    old_password_hash: str,
+    new_password_hash: str,
+) -> bool:
+    """
+    更新当前用户的密码。
+
+    :param db: 数据库异步会话
+    :param user_id: 当前用户 ID
+    :param old_password_hash: 用户的旧密码的哈希值
+    :param new_password_hash: 用户的新密码的哈希值
+    :return: 更新成功时为 True；用户不存在或密码已发生变化时为 False
+    """
+    result = await db.execute(
+        update(User)
+        .where(User.id == user_id, User.password == old_password_hash)
+        .values(password=new_password_hash)
+    )
+    await db.flush()
+    return cast(CursorResult[Any], result).rowcount == 1
+
+
+async def delete_user_tokens(db: AsyncSession, user_id: int) -> None:
+    """
+    删除用户的全部登录令牌。
+
+    :param db: 数据库异步会话
+    :param user_id: 需要撤销令牌的用户 ID
+    """
+    await db.execute(delete(UserToken).where(UserToken.user_id == user_id))
+    await db.flush()

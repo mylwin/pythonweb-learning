@@ -153,7 +153,8 @@ const showPasswordConfirm = () => {
       loadingInstance.close();
       
       if (result && result.success) {
-        showSuccessToast('密码修改成功');
+        showSuccessToast(result.message || '密码修改成功，请重新登录');
+        router.replace('/login');
       } else {
         showFailToast((result && result.message) || '密码修改失败');
       }
