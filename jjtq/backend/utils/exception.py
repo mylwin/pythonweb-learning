@@ -52,7 +52,11 @@ def register_exception_handlers(app: FastAPI) -> None:
         :param exc: HTTP 异常
         :return: 统一错误响应
         """
-        return error_response(exc.status_code, str(exc.detail))
+        response = error_response(exc.status_code, str(exc.detail))
+        # 如果响应头有自定义头，则添加到响应中
+        if exc.headers:
+            response.headers.update(exc.headers)
+        return response
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(

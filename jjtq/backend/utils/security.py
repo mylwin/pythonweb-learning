@@ -1,5 +1,23 @@
+import hashlib
+import secrets
+
 import bcrypt
 from fastapi.concurrency import run_in_threadpool
+
+
+def create_token() -> str:
+    """生成 128 位随机令牌。"""
+    return secrets.token_hex(16)
+
+
+def hash_token(token: str) -> str:
+    """
+    计算令牌摘要以供数据库保存和查询。
+
+    :param token: 客户端持有的随机令牌
+    :return: SHA-256 十六进制摘要
+    """
+    return hashlib.sha256(token.encode("ascii")).hexdigest()
 
 
 async def hash_password(password: str) -> str:

@@ -42,3 +42,10 @@ Content-Type: application/json
   "username": "jjtq",
   "password": "wrong123"
 }
+
+### 查询当前用户（将令牌替换为注册或登录响应中的 token）
+GET http://127.0.0.1:8000/api/user/info
+Authorization: Bearer <token>
+
+### 未携带令牌：HTTP 401
+GET http://127.0.0.1:8000/api/user/info

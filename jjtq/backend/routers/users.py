@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jjtq.backend.config.database import get_db
-from jjtq.backend.schemas.users import UserAuthRequest
+from jjtq.backend.dependencies.auth import get_current_user
+from jjtq.backend.models.users import User
+from jjtq.backend.schemas.users import UserAuthRequest, UserLoginInfoResponse
 from jjtq.backend.services import users as users_service
 from jjtq.backend.utils.response import error_response, success_response
 
@@ -48,3 +50,16 @@ async def login_user(
     if login_data is None:
         return error_response(401, "用户不存在或密码错误")
     return success_response(message="登录成功", data=login_data)
+
+
+@router.get("/info")
+async def get_current_user_info(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    查询当前已登录用户的信息。
+
+    :param current_user: 根据有效令牌获取的用户
+    :return: 不包含密码的用户信息
+    """
+    return success_response(data=UserLoginInfoResponse.model_validate(current_user))

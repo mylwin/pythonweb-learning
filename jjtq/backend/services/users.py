@@ -1,4 +1,4 @@
-import uuid
+from datetime import timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +9,27 @@ from jjtq.backend.schemas.users import (
     UserRegisterInfoResponse,
     UserRegisterResponse,
 )
-from jjtq.backend.utils.security import hash_password, verify_password
+from jjtq.backend.utils.security import (
+    create_token,
+    hash_password,
+    hash_token,
+    verify_password,
+)
+
+TOKEN_LIFETIME = timedelta(days=7)
+
+
+async def issue_token(db: AsyncSession, user_id: int) -> str:
+    """
+    生成令牌并将摘要与用户和过期时间一起保存。
+
+    :param db: 数据库异步会话
+    :param user_id: 登录用户 ID
+    :return: 返回给客户端的原始令牌
+    """
+    token = create_token()
+    await users_crud.create_user_token(db, user_id, hash_token(token), TOKEN_LIFETIME)
+    return token
 
 
 async def register_user(
@@ -29,8 +49,7 @@ async def register_user(
     password_hash = await hash_password(password)
     user = await users_crud.create_user(db, username, password_hash)
 
-    # 生成随机 token
-    token: str = uuid.uuid4().hex
+    token = await issue_token(db, user.id)
     return UserRegisterResponse(
         token=token,
         user_info=UserRegisterInfoResponse.model_validate(user),
@@ -52,8 +71,7 @@ async def login_user(
     if user is None or not await verify_password(password, user.password):
         return None
 
-    # 生成随机 token
-    token: str = uuid.uuid4().hex
+    token = await issue_token(db, user.id)
     return UserLoginResponse(
         token=token,
         user_info=UserLoginInfoResponse.model_validate(user),
