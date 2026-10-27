@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Index, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -38,11 +38,11 @@ class UserToken(Base):
     """用户令牌模型。"""
 
     __tablename__ = "user_token"
+    __table_args__ = (Index("fk_user_token_user_idx", "user_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"),
-        nullable=False,
+        Integer, nullable=False, comment="用户ID",
     )
     token: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import VARCHAR, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import VARCHAR, DateTime, Index, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -76,7 +76,7 @@ class News(Base):
         String(50), comment="作者"
     )
     category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("news_category.id"), nullable=False, comment="分类ID"
+        Integer, nullable=False, comment="分类ID"
     )
     views: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False, comment="浏览量"
