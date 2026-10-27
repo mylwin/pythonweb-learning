@@ -18,7 +18,10 @@ def validation_error_message(error: dict) -> str:
     # 错误类型
     field_key = field[0] if field and isinstance(field[0], str) else ""
     # 字段名称
-    field_name = {"username": "用户名", "password": "密码"}.get(field_key, "该字段")
+    field_name = {
+        "username": "用户名", "password": "密码", "nickname": "昵称",
+        "avatar": "头像", "gender": "性别", "phone": "手机号", "bio": "简介",
+    }.get(field_key, "该字段")
     error_type = error.get("type")
     context = error.get("ctx") or {}
     if error_type == "missing":
@@ -29,6 +32,12 @@ def validation_error_message(error: dict) -> str:
         return f"{field_name}长度不能超过 {context['max_length']} 个字符"
     if error_type == "string_type":
         return f"{field_name}必须是字符串"
+    if error_type == "string_pattern_mismatch" and field_key == "phone":
+        return "手机号格式不正确"
+    if error_type == "literal_error" and field_key == "gender":
+        return "性别必须是 male、female 或 unknown"
+    if error_type == "extra_forbidden":
+        return "包含不允许更新的字段"
     if error_type == "value_error":
         return error.get("msg", "输入不符合要求").removeprefix("Value error, ")
     return "输入不符合要求"

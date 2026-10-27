@@ -25,7 +25,7 @@ class User(Base):
     avatar: Mapped[str | None] = mapped_column(String(255), comment="头像")
     gender: Mapped[str | None] = mapped_column(String(10), comment="性别")
     bio: Mapped[str | None] = mapped_column(String(255), comment="简介")
-    phone: Mapped[str | None] = mapped_column(String(20), comment="手机号")
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True, comment="手机号")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False, comment="创建时间"
     )

@@ -236,6 +236,89 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.count_users(), 0)
         self.assertEqual(self.session.scalar(select(func.count()).select_from(UserToken)), 0)
 
+    async def test_update_only_authenticated_user_fields(self):
+        _, alice = await self.request({"username": "alice", "password": "secret123"})
+        _, bob = await self.request({"username": "bob", "password": "secret123"})
+        alice_token = f"Bearer {alice['data']['token']}"
+        status, body = await self.request(
+            {"bio": "新的简介"}, path="/api/user/update", method="PUT", token=alice_token
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body["data"]["username"], "alice")
+        self.assertEqual(body["data"]["bio"], "新的简介")
+        self.assertNotIn("password", body["data"])
+        self.assertEqual(body["data"]["nickname"], "jjtq_alice")
+        status, info = await self.request(
+            path="/api/user/info", method="GET", token=alice_token
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(info["data"]["bio"], "新的简介")
+        status, info = await self.request(
+            path="/api/user/info", method="GET", token=f"Bearer {bob['data']['token']}"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(info["data"]["bio"], "这个人很懒，什么都没留下")
+
+    async def test_update_multiple_fields_and_explicit_null(self):
+        _, body = await self.request({"username": "alice", "password": "secret123"})
+        token = f"Bearer {body['data']['token']}"
+        status, body = await self.request(
+            {"nickname": "小明", "avatar": "https://example.com/a.png", "gender": "male",
+             "phone": "13812345678", "bio": "个人简介"},
+            path="/api/user/update", method="PUT", token=token,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body["data"]["gender"], "male")
+        self.assertEqual(self.session.scalars(select(User)).one().phone, "13812345678")
+        status, body = await self.request(
+            {"phone": None, "bio": None}, path="/api/user/update", method="PUT", token=token
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNone(self.session.scalars(select(User)).one().phone)
+        self.assertIsNone(body["data"]["bio"])
+        self.assertEqual(body["data"]["nickname"], "小明")
+
+    async def test_update_requires_auth_and_valid_payload(self):
+        _, body = await self.request({"username": "alice", "password": "secret123"})
+        token = f"Bearer {body['data']['token']}"
+        for header in (None, "Bearer invalid"):
+            status, _ = await self.request(
+                {"bio": "新的简介"}, path="/api/user/update", method="PUT", token=header
+            )
+            self.assertEqual(status, 401)
+        for payload, expected in (
+            ({}, "请至少提供一个需要更新的字段"),
+            ({"gender": "other"}, "性别必须是 male、female 或 unknown"),
+            ({"phone": "123"}, "手机号格式不正确"),
+            ({"bio": "x"}, "简介长度不能少于 2 个字符"),
+            ({"id": 2, "bio": "新的简介"}, "包含不允许更新的字段"),
+            ({"password": "newpassword"}, "包含不允许更新的字段"),
+        ):
+            status, body = await self.request(
+                payload, path="/api/user/update", method="PUT", token=token
+            )
+            self.assertEqual(status, 422, payload)
+            self.assertEqual(body["data"][0]["msg"], expected)
+        self.assertEqual(self.session.scalars(select(User)).one().bio, "这个人很懒，什么都没留下")
+
+    async def test_duplicate_phone_returns_conflict_without_partial_update(self):
+        _, alice = await self.request({"username": "alice", "password": "secret123"})
+        _, bob = await self.request({"username": "bob", "password": "secret123"})
+        status, _ = await self.request(
+            {"phone": "13812345678"}, path="/api/user/update", method="PUT",
+            token=f"Bearer {alice['data']['token']}",
+        )
+        self.assertEqual(status, 200)
+        status, body = await self.request(
+            {"phone": "13812345678", "bio": "不应保存"}, path="/api/user/update",
+            method="PUT", token=f"Bearer {bob['data']['token']}",
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(body["message"], "手机号已被使用")
+        bob_user = self.session.scalars(select(User).where(User.username == "bob")).one()
+        self.assertIsNone(bob_user.phone)
+        self.assertEqual(bob_user.bio, "这个人很懒，什么都没留下")
+
 
 if __name__ == "__main__":
     unittest.main()

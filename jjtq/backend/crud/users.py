@@ -52,9 +52,11 @@ async def create_user_token(
     """
     # 使用数据库时间计算和校验，避免应用与数据库时区不同导致提前过期。
     database_time = (await db.execute(select(func.now()))).scalar_one()
-    db.add(UserToken(
-        user_id=user_id, token=token_hash, expires_at=database_time + lifetime
-    ))
+    db.add(
+        UserToken(
+            user_id=user_id, token=token_hash, expires_at=database_time + lifetime
+        )
+    )
     await db.flush()
 
 
@@ -72,3 +74,20 @@ async def get_user_by_valid_token(db: AsyncSession, token_hash: str) -> User | N
         .where(UserToken.token == token_hash, UserToken.expires_at > func.now())
     )
     return result.scalar_one_or_none()
+
+
+async def update_user_info(
+    db: AsyncSession, user: User, fields: dict[str, str | None]
+) -> User:
+    """
+    更新当前用户提供的资料字段。
+
+    :param db: 数据库异步会话
+    :param user: 已认证的用户对象
+    :param fields: 需要写入的用户资料字段
+    :return: 更新后的用户对象
+    """
+    for field, value in fields.items():
+        setattr(user, field, value)
+    await db.flush()
+    return user
