@@ -3,8 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class CategoryResponse(BaseModel):
-    """新闻分类响应模型"""
+class CategoryData(BaseModel):
+    """新闻分类数据模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -20,10 +20,10 @@ class CategoryListResponse(BaseModel):
 
     code: int = 200
     message: str = "success"
-    data: list[CategoryResponse]
+    data: list[CategoryData]
 
 
-class RelatedNewsResponse(BaseModel):
+class RelatedNewsData(BaseModel):
     """相关新闻摘要"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -46,7 +46,7 @@ class NewsDetailData(BaseModel):
     publish_time: datetime = Field(serialization_alias="publishTime")
     category_id: int = Field(serialization_alias="categoryId")
     views: int
-    related_news: list[RelatedNewsResponse] = Field(
+    related_news: list[RelatedNewsData] = Field(
         default_factory=list, serialization_alias="relatedNews"
     )
 

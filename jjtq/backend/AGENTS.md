@@ -32,6 +32,9 @@
 - 业务参数使用 `news_id`、`category_id`、`page_size`；避免用 `id`、
   `list` 等内置名称作局部变量或函数参数。模型的 `id` 字段可以保留。
 - 时间属性与已有数据库列统一，如 `created_at`、`updated_at`。
+- Schema 中请求体以 `Request` 结尾；Service 使用的业务结果或响应 `data`
+  结构以 `Data` 结尾；包含 `code`、`message`、`data` 的完整接口响应
+  以 `Response` 结尾。字段别名应保证既有 JSON 格式不变。
 - 可空类型统一使用 `str | None`，函数声明尽量补齐参数和返回类型。
 - 项目内部使用 `jjtq.backend...` 绝对导入；按标准库、第三方、项目模块
   分组。不同层的同名模块用职责别名区分，例如：

@@ -99,8 +99,8 @@ class UserChangePasswordRequest(BaseModel):
         return value
 
 
-class UserRegisterInfoResponse(BaseModel):
-    """用户注册信息响应模型"""
+class UserRegisterInfoData(BaseModel):
+    """用户注册信息数据模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -110,8 +110,8 @@ class UserRegisterInfoResponse(BaseModel):
     avatar: str | None = None
 
 
-class UserLoginInfoResponse(BaseModel):
-    """用户登录信息响应模型"""
+class UserLoginInfoData(BaseModel):
+    """用户登录信息数据模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -122,26 +122,26 @@ class UserLoginInfoResponse(BaseModel):
     avatar: str | None = None
 
 
-class UserRegisterResponse(BaseModel):
-    """用户注册响应模型"""
+class UserRegisterData(BaseModel):
+    """用户注册结果数据模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
     token: str
-    user_info: UserRegisterInfoResponse = Field(serialization_alias="userInfo")
+    user_info: UserRegisterInfoData = Field(serialization_alias="userInfo")
 
 
-class UserLoginResponse(BaseModel):
-    """用户登录响应模型"""
+class UserLoginData(BaseModel):
+    """用户登录结果数据模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
     token: str
-    user_info: UserLoginInfoResponse = Field(serialization_alias="userInfo")
+    user_info: UserLoginInfoData = Field(serialization_alias="userInfo")
 
 
-class UserProfileUpdateResponse(BaseModel):
-    """用户更新信息响应模型"""
+class UserProfileUpdateData(BaseModel):
+    """用户资料更新结果数据模型"""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -151,3 +151,43 @@ class UserProfileUpdateResponse(BaseModel):
     avatar: str | None = None
     gender: str | None = None
     bio: str | None = None
+
+
+class UserRegisterResponse(BaseModel):
+    """用户注册接口的完整响应。"""
+
+    code: int = 200
+    message: str = "注册成功"
+    data: UserRegisterData
+
+
+class UserLoginResponse(BaseModel):
+    """用户登录接口的完整响应。"""
+
+    code: int = 200
+    message: str = "登录成功"
+    data: UserLoginData
+
+
+class UserInfoResponse(BaseModel):
+    """当前用户信息接口的完整响应。"""
+
+    code: int = 200
+    message: str = "success"
+    data: UserLoginInfoData
+
+
+class UserProfileUpdateResponse(BaseModel):
+    """用户资料更新接口的完整响应。"""
+
+    code: int = 200
+    message: str = "用户信息更新成功"
+    data: UserProfileUpdateData
+
+
+class UserChangePasswordResponse(BaseModel):
+    """用户修改密码接口的完整响应。"""
+
+    code: int = 200
+    message: str = "密码更新成功，请重新登录"
+    data: None = None

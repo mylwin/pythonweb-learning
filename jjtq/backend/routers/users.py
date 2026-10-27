@@ -9,7 +9,12 @@ from jjtq.backend.models.users import User
 from jjtq.backend.schemas.users import (
     UserAuthRequest,
     UserChangePasswordRequest,
-    UserLoginInfoResponse,
+    UserChangePasswordResponse,
+    UserInfoResponse,
+    UserLoginInfoData,
+    UserLoginResponse,
+    UserProfileUpdateResponse,
+    UserRegisterResponse,
     UserUpdateRequest,
 )
 from jjtq.backend.services import users as users_service
@@ -19,7 +24,7 @@ from jjtq.backend.utils.response import success_response
 router = APIRouter(prefix="/api/user", tags=["users"])
 
 
-@router.post("/register")
+@router.post("/register", response_model=UserRegisterResponse)
 async def register_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     payload: UserAuthRequest,
@@ -37,7 +42,7 @@ async def register_user(
     return success_response(message="注册成功", data=register_data)
 
 
-@router.post("/login")
+@router.post("/login", response_model=UserLoginResponse)
 async def login_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     payload: UserAuthRequest,
@@ -53,7 +58,7 @@ async def login_user(
     return success_response(message="登录成功", data=login_data)
 
 
-@router.get("/info")
+@router.get("/info", response_model=UserInfoResponse)
 async def get_current_user_info(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -63,10 +68,10 @@ async def get_current_user_info(
     :param current_user: 根据有效令牌获取的用户
     :return: 不包含密码的用户信息
     """
-    return success_response(data=UserLoginInfoResponse.model_validate(current_user))
+    return success_response(data=UserLoginInfoData.model_validate(current_user))
 
 
-@router.put("/update")
+@router.put("/update", response_model=UserProfileUpdateResponse)
 async def update_current_user_info(
     payload: UserUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -84,7 +89,7 @@ async def update_current_user_info(
     return success_response(message="用户信息更新成功", data=user)
 
 
-@router.put("/password")
+@router.put("/password", response_model=UserChangePasswordResponse)
 async def update_current_user_password(
     payload: UserChangePasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db, scope="function")],

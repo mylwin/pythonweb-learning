@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jjtq.backend.crud import news as news_crud
-from jjtq.backend.schemas.news import NewsDetailData, RelatedNewsResponse
+from jjtq.backend.schemas.news import NewsDetailData, RelatedNewsData
 from jjtq.backend.utils.errors import BusinessError
 
 
@@ -31,6 +31,6 @@ async def get_news_detail(db: AsyncSession, news_id: int) -> NewsDetailData:
     # 构造响应，事务由 get_db 统一提交，异常时统一回滚
     detail = NewsDetailData.model_validate(news_detail)
     detail.related_news = [
-        RelatedNewsResponse.model_validate(item) for item in related_news
+        RelatedNewsData.model_validate(item) for item in related_news
     ]
     return detail

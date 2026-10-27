@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jjtq.backend.crud import users as users_crud
 from jjtq.backend.models.users import User
 from jjtq.backend.schemas.users import (
-    UserLoginInfoResponse,
-    UserLoginResponse,
-    UserProfileUpdateResponse,
-    UserRegisterInfoResponse,
-    UserRegisterResponse,
+    UserLoginInfoData,
+    UserLoginData,
+    UserProfileUpdateData,
+    UserRegisterInfoData,
+    UserRegisterData,
     UserUpdateRequest,
 )
 from jjtq.backend.utils.errors import BusinessError
@@ -39,7 +39,7 @@ async def issue_token(db: AsyncSession, user_id: int) -> str:
 
 async def register_user(
     db: AsyncSession, username: str, password: str
-) -> UserRegisterResponse:
+) -> UserRegisterData:
     """
     注册用户并生成登录 token。
 
@@ -56,15 +56,15 @@ async def register_user(
     user = await users_crud.create_user(db, username, password_hash)
 
     token = await issue_token(db, user.id)
-    return UserRegisterResponse(
+    return UserRegisterData(
         token=token,
-        user_info=UserRegisterInfoResponse.model_validate(user),
+        user_info=UserRegisterInfoData.model_validate(user),
     )
 
 
 async def login_user(
     db: AsyncSession, username: str, password: str
-) -> UserLoginResponse:
+) -> UserLoginData:
     """
     用户登录并生成登录 token。
 
@@ -87,15 +87,15 @@ async def login_user(
         raise BusinessError(401, "用户不存在或密码错误")
 
     token = await issue_token(db, user.id)
-    return UserLoginResponse(
+    return UserLoginData(
         token=token,
-        user_info=UserLoginInfoResponse.model_validate(user),
+        user_info=UserLoginInfoData.model_validate(user),
     )
 
 
 async def update_user_info(
     db: AsyncSession, user: User, payload: UserUpdateRequest
-) -> UserProfileUpdateResponse:
+) -> UserProfileUpdateData:
     """
     更新当前用户指定的资料。
 
@@ -121,7 +121,7 @@ async def update_user_info(
         if fields.get("phone") is not None and (is_duplicate or is_phone_unique):
             raise BusinessError(409, "手机号已被使用") from error
         raise
-    return UserProfileUpdateResponse.model_validate(updated_user)
+    return UserProfileUpdateData.model_validate(updated_user)
 
 
 async def update_user_password(
