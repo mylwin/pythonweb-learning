@@ -86,4 +86,8 @@ class News(Base):
     )
 
     def __repr__(self) -> str:
+        """返回新闻对象的调试信息。
+
+        :return: 调试字符串
+        """
         return f"<News(id={self.id}, title='{self.title}', views={self.views})>"

@@ -106,8 +106,11 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
             {"username": "alice", "password": "密" * 30},
             {"username": "alice"},
         ):
-            status, _ = await self.request(payload)
+            status, body = await self.request(payload)
             self.assertEqual(status, 422)
+            self.assertEqual(body["code"], 422)
+            self.assertEqual(body["message"], "请求参数校验失败")
+            self.assertTrue(body["data"])
         self.assertEqual(self.count_users(), 0)
 
 

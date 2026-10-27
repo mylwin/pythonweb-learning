@@ -12,12 +12,17 @@ from jjtq.backend.utils.response import error_response, success_response
 router = APIRouter(prefix="/api/user", tags=["users"])
 
 
-# 用户注册
 @router.post("/register")
 async def register_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     payload: UserRegisterRequest,
 ):
+    """注册用户。
+
+    :param db: 数据库异步会话
+    :param payload: 注册请求体，包含用户名和密码
+    :return: 统一成功响应；用户名已存在时返回 409 错误响应
+    """
     register_data = await users_service.register_user(
         db, payload.username, payload.password
     )

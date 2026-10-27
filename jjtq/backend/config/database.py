@@ -35,8 +35,11 @@ async_session_factory = async_sessionmaker(
 )
 
 
-# 依赖项，获取数据库异步会话
 async def get_db():
+    """获取数据库异步会话，统一提交和回滚事务。
+
+    :return: 数据库异步会话
+    """
     async with async_session_factory() as session:
         try:
             yield session

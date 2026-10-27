@@ -9,9 +9,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from jjtq.backend.routers import news, users
+from jjtq.backend.utils.exception import register_exception_handlers
 
 # 创建 app 实例
 app = FastAPI(title="掘金头条")
+
+# 注册全局异常处理器
+register_exception_handlers(app)
 
 # 绑定路由
 app.include_router(news.router)

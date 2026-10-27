@@ -10,7 +10,12 @@ class UserRegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password_bytes(cls, value: str) -> str:
-        """bcrypt 只处理前 72 字节，超长密码直接拒绝，避免被静默截断。"""
+        """校验密码是否超过 bcrypt 的 72 字节上限。
+
+        :param value: 原始密码
+        :return: 校验通过的密码
+        :raises ValueError: 密码 UTF-8 编码后超过 72 字节
+        """
         if len(value.encode("utf-8")) > 72:
             raise ValueError("密码长度不能超过 72 字节")
         return value

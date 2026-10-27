@@ -7,10 +7,16 @@ from jjtq.backend.crud import users as users_crud
 from jjtq.backend.schemas.users import UserAuthResponse, UserInfoResponse
 
 
-# 用户注册：用户名已存在时返回 None
 async def register_user(
     db: AsyncSession, username: str, password: str
 ) -> UserAuthResponse | None:
+    """注册用户并生成登录 token。
+
+    :param db: 数据库异步会话
+    :param username: 用户名
+    :param password: 明文密码，由服务层负责加密
+    :return: 认证数据；用户名已存在时返回 None
+    """
     if await users_crud.get_user_by_username(db, username) is not None:
         return None
 
