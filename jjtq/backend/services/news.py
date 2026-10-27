@@ -5,7 +5,8 @@ from jjtq.backend.schemas.news import NewsDetailData, RelatedNewsResponse
 
 
 async def get_news_detail(db: AsyncSession, news_id: int) -> NewsDetailData | None:
-    """获取新闻详情并累加浏览量。
+    """
+    获取新闻详情并累加浏览量。
 
     :param db: 数据库异步会话
     :param news_id: 新闻 ID

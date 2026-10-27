@@ -47,7 +47,7 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
         self.session.close()
         self.engine.dispose()
 
-    async def request(self, payload):
+    async def request(self, payload, path="/api/user/register"):
         body = json.dumps(payload).encode()
         messages = []
 
@@ -60,7 +60,7 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
         await app({
             "type": "http", "asgi": {"version": "3.0"},
             "http_version": "1.1", "method": "POST", "scheme": "http",
-            "path": "/api/user/register", "raw_path": b"/api/user/register",
+            "path": path, "raw_path": path.encode(),
             "query_string": b"", "root_path": "",
             "headers": [(b"content-type", b"application/json")],
             "server": ("test", 80), "client": ("test", 123),
@@ -112,6 +112,64 @@ class UserRegisterTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(body["message"], "请求参数校验失败")
             self.assertTrue(body["data"])
         self.assertEqual(self.count_users(), 0)
+
+    async def test_register_then_login_with_symbol_password(self):
+        payload = {"username": "用户123", "password": "secret!123"}
+        status, _ = await self.request(payload)
+        self.assertEqual(status, 200)
+        stored_hash = self.session.scalars(select(User.password)).one()
+
+        for _ in range(2):
+            status, body = await self.request(payload, path="/api/user/login")
+            self.assertEqual(status, 200)
+            self.assertEqual(body["message"], "登录成功")
+            self.assertEqual(body["data"]["userInfo"]["username"], "用户123")
+            self.assertEqual(self.session.scalars(select(User.password)).one(), stored_hash)
+
+    async def test_login_invalid_credentials(self):
+        await self.request({"username": "alice", "password": "secret123"})
+        for payload in (
+            {"username": "alice", "password": "wrong123"},
+            {"username": "nobody", "password": "secret123"},
+        ):
+            status, body = await self.request(payload, path="/api/user/login")
+            self.assertEqual(status, 401)
+            self.assertEqual(body, {"code": 401, "message": "用户不存在或密码错误", "data": None})
+
+    async def test_validation_messages_do_not_echo_password(self):
+        cases = (
+            ({"username": "a", "password": "secret123"}, "用户名长度不能少于 2 个字符"),
+            ({"username": "bad_name", "password": "secret123"}, "用户名只能包含字母或数字（支持中文）"),
+            ({"username": "alice", "password": "短" * 30}, "密码长度不能超过 72 字节"),
+            ({"username": "alice", "password": "12345"}, "密码长度不能少于 6 个字符"),
+            ({"username": "alice"}, "请填写密码"),
+        )
+        for payload, message in cases:
+            for path in ("/api/user/register", "/api/user/login"):
+                status, body = await self.request(payload, path=path)
+                self.assertEqual(status, 422)
+                self.assertEqual(body["data"][0]["msg"], message)
+                self.assertEqual(set(body["data"][0]), {"loc", "type", "msg"})
+                if "password" in payload:
+                    self.assertNotIn(payload["password"], json.dumps(body, ensure_ascii=False))
+
+    async def test_bcrypt_compatible_existing_hash(self):
+        stored_hash = bcrypt.hashpw(b"old!password", bcrypt.gensalt()).decode()
+        self.session.add(User(username="olduser", password=stored_hash))
+        self.session.commit()
+        status, body = await self.request(
+            {"username": "olduser", "password": "old!password"}, path="/api/user/login"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body["data"]["userInfo"]["username"], "olduser")
+
+    async def test_invalid_stored_hash_returns_unauthorized(self):
+        self.session.add(User(username="broken", password="not-a-bcrypt-hash"))
+        self.session.commit()
+        status, _ = await self.request(
+            {"username": "broken", "password": "secret123"}, path="/api/user/login"
+        )
+        self.assertEqual(status, 401)
 
 
 if __name__ == "__main__":

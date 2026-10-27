@@ -7,7 +7,8 @@ from jjtq.backend.models.news import Category, News
 async def get_categories(
     db: AsyncSession, skip: int = 0, limit: int = 100
 ) -> list[Category]:
-    """获取新闻分类列表。
+    """
+    获取新闻分类列表。
 
     :param db: 数据库异步会话
     :param skip: 跳过的记录数
@@ -30,7 +31,8 @@ async def get_news_list(
     page_size: int = 10,
     category_id: int | None = None,
 ) -> list[News]:
-    """获取新闻列表。
+    """
+    获取新闻列表。
 
     :param db: 数据库异步会话
     :param page: 页码，从 1 开始
@@ -53,7 +55,8 @@ async def get_news_list(
 
 
 async def get_news_detail(db: AsyncSession, news_id: int) -> News | None:
-    """获取新闻详情。
+    """
+    获取新闻详情。
 
     :param db: 数据库异步会话
     :param news_id: 新闻 ID
@@ -65,7 +68,8 @@ async def get_news_detail(db: AsyncSession, news_id: int) -> News | None:
 
 
 async def increment_views(db: AsyncSession, news_id: int) -> None:
-    """将指定新闻的浏览量原子加 1。
+    """
+    将指定新闻的浏览量原子加 1。
 
     :param db: 数据库异步会话
     :param news_id: 新闻 ID
@@ -81,7 +85,8 @@ async def increment_views(db: AsyncSession, news_id: int) -> None:
 async def get_related_news(
     db: AsyncSession, news_id: int, category_id: int
 ) -> list[News]:
-    """查询同分类下的相关新闻。
+    """
+    查询同分类下的相关新闻。
 
     :param db: 数据库异步会话
     :param news_id: 当前新闻 ID，结果中会排除该新闻

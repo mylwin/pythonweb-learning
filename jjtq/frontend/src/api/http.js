@@ -38,8 +38,11 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const body = error.response?.data
+    const validationMessage = status === 422 && Array.isArray(body?.data)
+      ? body.data.find((item) => typeof item?.msg === 'string')?.msg
+      : ''
     const message =
-      body?.message ||
+      validationMessage || body?.message ||
       body?.detail ||
       (typeof body === 'string' ? body : '') ||
       error.message ||

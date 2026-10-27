@@ -24,3 +24,21 @@ Content-Type: application/json
   "username": "j",
   "password": "123"
 }
+
+### 用户登录（成功）
+POST http://127.0.0.1:8000/api/user/login
+Content-Type: application/json
+
+{
+  "username": "jjtq",
+  "password": "123456"
+}
+
+### 密码错误：HTTP 401
+POST http://127.0.0.1:8000/api/user/login
+Content-Type: application/json
+
+{
+  "username": "jjtq",
+  "password": "wrong123"
+}

@@ -5,7 +5,8 @@ from jjtq.backend.models.users import User
 
 
 async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
-    """根据用户名查询用户。
+    """
+    根据用户名查询用户。
 
     :param db: 数据库异步会话
     :param username: 用户名
@@ -16,11 +17,12 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
 
 
 async def create_user(db: AsyncSession, username: str, password_hash: str) -> User:
-    """创建用户并加入当前事务。
+    """
+    创建用户并加入当前事务。
 
     :param db: 数据库异步会话
     :param username: 用户名
-    :param password_hash: bcrypt 加密后的密码
+    :param password_hash: bcrypt 哈希后的密码
     :return: 已分配主键的用户对象
     """
     user: User = User(

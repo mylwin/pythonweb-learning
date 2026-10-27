@@ -19,7 +19,8 @@ async def get_categories(
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=0)] = 100,
 ):
-    """获取新闻分类列表。
+    """
+    获取新闻分类列表。
 
     :param db: 数据库异步会话
     :param skip: 跳过的记录数
@@ -37,7 +38,8 @@ async def get_news_list(
     page_size: Annotated[int, Query(alias="pageSize", ge=10, le=100)] = 10,
     category_id: Annotated[int | None, Query(alias="categoryId")] = None,
 ):
-    """获取新闻列表。
+    """
+    获取新闻列表。
 
     :param db: 数据库异步会话
     :param page: 页码，从 1 开始
@@ -56,7 +58,8 @@ async def get_news_detail(
     db: Annotated[AsyncSession, Depends(get_db)],
     news_id: Annotated[int, Query(alias="id", title="新闻编号", ge=1)],
 ):
-    """获取新闻详情。
+    """
+    获取新闻详情。
 
     :param db: 数据库异步会话
     :param news_id: 新闻 ID，对应查询参数 id

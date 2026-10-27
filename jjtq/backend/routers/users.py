@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jjtq.backend.config.database import get_db
-from jjtq.backend.schemas.users import UserRegisterRequest
+from jjtq.backend.schemas.users import UserAuthRequest
 from jjtq.backend.services import users as users_service
 from jjtq.backend.utils.response import error_response, success_response
 
@@ -15,9 +15,10 @@ router = APIRouter(prefix="/api/user", tags=["users"])
 @router.post("/register")
 async def register_user(
     db: Annotated[AsyncSession, Depends(get_db)],
-    payload: UserRegisterRequest,
+    payload: UserAuthRequest,
 ):
-    """注册用户。
+    """
+    用户注册接口。
 
     :param db: 数据库异步会话
     :param payload: 注册请求体，包含用户名和密码
@@ -29,3 +30,21 @@ async def register_user(
     if register_data is None:
         return error_response(409, "用户名已存在")
     return success_response(message="注册成功", data=register_data)
+
+
+@router.post("/login")
+async def login_user(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    payload: UserAuthRequest,
+):
+    """
+    用户登录接口。
+
+    :param db: 数据库异步会话
+    :param payload: 登录请求体，包含用户名和密码
+    :return: 统一成功响应；用户不存在或密码错误时返回 401 错误响应
+    """
+    login_data = await users_service.login_user(db, payload.username, payload.password)
+    if login_data is None:
+        return error_response(401, "用户不存在或密码错误")
+    return success_response(message="登录成功", data=login_data)
