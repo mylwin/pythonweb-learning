@@ -1,4 +1,5 @@
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # 兼容在 backend 目录执行 uvicorn main:app 或直接运行 main.py
@@ -8,11 +9,25 @@ if not __package__:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from jjtq.backend.config.database import async_engine
 from jjtq.backend.routers import favorite, history, news, users
 from jjtq.backend.utils.exception import register_exception_handlers
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    在应用退出时释放 MySQL 连接池。
+
+    :param app: 当前 FastAPI 应用
+    """
+    try:
+        yield
+    finally:
+        await async_engine.dispose()
+
+
 # 创建 app 实例
-app = FastAPI(title="掘金头条")
+app = FastAPI(title="掘金头条", lifespan=lifespan)
 
 # 注册全局异常处理器
 register_exception_handlers(app)
