@@ -8,7 +8,7 @@ if not __package__:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from jjtq.backend.routers import favorite, news, users
+from jjtq.backend.routers import favorite, history, news, users
 from jjtq.backend.utils.exception import register_exception_handlers
 
 # 创建 app 实例
@@ -21,6 +21,7 @@ register_exception_handlers(app)
 app.include_router(news.router)
 app.include_router(users.router)
 app.include_router(favorite.router)
+app.include_router(history.router)
 
 # 解决跨域问题
 origins = ["http://localhost:5173", "http://localhost:3000"]

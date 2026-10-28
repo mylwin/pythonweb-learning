@@ -1,0 +1,25 @@
+### 记录一次浏览：JSON 请求体，使用新闻 ID
+POST http://127.0.0.1:8000/api/history/add
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"newsId": 1}
+
+### 分页获取浏览历史：同一新闻只返回最近一次浏览
+GET http://127.0.0.1:8000/api/history/list?page=1&pageSize=50
+Authorization: Bearer <token>
+
+### 按新闻 ID 删除：清除当前用户对该新闻的全部浏览记录
+DELETE http://127.0.0.1:8000/api/history/delete/1
+Authorization: Bearer <token>
+
+### 清空当前用户全部浏览历史，重复调用仍成功
+DELETE http://127.0.0.1:8000/api/history/clear
+Authorization: Bearer <token>
+
+### 未携带令牌：HTTP 401
+GET http://127.0.0.1:8000/api/history/list
+
+### 非法分页参数：HTTP 422
+GET http://127.0.0.1:8000/api/history/list?page=0&pageSize=101
+Authorization: Bearer <token>
