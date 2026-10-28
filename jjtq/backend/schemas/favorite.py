@@ -40,3 +40,52 @@ class FavoriteRemoveResponse(BaseModel):
     code: int = 200
     message: str = "success"
     data: None
+
+
+class FavoriteListRequest(BaseModel):
+    """收藏列表请求参数。"""
+
+    page: int = Field(1, ge=1, title="页码")
+    page_size: int = Field(10, ge=1, le=100, title="每页数量", alias="pageSize")
+
+
+class FavoriteListInfoData(BaseModel):
+    """
+    收藏列表信息数据。
+    """
+
+    id: int
+    title: str
+    description: str | None = None
+    image: str | None = None
+    author: str | None = None
+    publish_time: datetime = Field(serialization_alias="publishTime")
+    category_id: int = Field(serialization_alias="categoryId")
+    views: int
+    favorite_time: datetime = Field(serialization_alias="favoriteTime")
+
+
+class FavoriteListData(BaseModel):
+    """收藏列表数据。"""
+
+    data_list: list[FavoriteListInfoData] = Field(
+        default_factory=list, serialization_alias="list"
+    )
+    total: int
+    has_more: bool = Field(serialization_alias="hasMore")
+
+
+class FavoriteListResponse(BaseModel):
+    """收藏列表接口响应。"""
+
+    code: int = 200
+    message: str = "success"
+    data: FavoriteListData
+
+
+class FavoriteClearResponse(BaseModel):
+    """清空收藏接口响应。"""
+
+    code: int = 200
+    message: str = "success"
+    data: None

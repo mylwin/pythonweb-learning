@@ -1,12 +1,14 @@
 import json
 import unittest
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
 from jjtq.backend.config.database import get_db
+from jjtq.backend.crud import favorite as favorite_crud
 from jjtq.backend.main import app
 from jjtq.backend.models.favorite import Favorite
 from jjtq.backend.models.news import News
@@ -125,3 +127,97 @@ class FavoriteWriteTests(unittest.IsolatedAsyncioTestCase):
         status, _ = await self.request("POST", "add", "newsId=999", "a" * 32)
         self.assertEqual(status, 404)
         self.assertEqual(self.session.scalars(select(Favorite)).all(), [])
+
+    async def test_list_and_clear_require_authentication(self):
+        for method, action in (("GET", "list"), ("DELETE", "clear")):
+            for token in (None, "invalid", "d" * 32, "c" * 32):
+                status, _ = await self.request(method, action, "", token)
+                self.assertEqual(status, 401)
+
+    async def test_list_validates_pagination(self):
+        for query in (
+            "page=0", "page=-1", "page=abc", "pageSize=0",
+            "pageSize=-1", "pageSize=101", "pageSize=abc",
+        ):
+            status, _ = await self.request("GET", "list", query, "a" * 32)
+            self.assertEqual(status, 422, query)
+
+    async def test_list_pagination_sorting_and_user_isolation(self):
+        favorite_time = datetime(2026, 1, 1, 12)
+        for news_id in range(11, 23):
+            self.session.add(News(
+                id=news_id, title=f"新闻{news_id}", content="正文不应返回",
+                category_id=1,
+            ))
+        self.session.add_all([
+            Favorite(user_id=1, news_id=news_id, created_at=favorite_time)
+            for news_id in range(10, 23)
+        ])
+        # 孤立收藏和其他用户收藏都不能影响当前用户的列表、总数和分页。
+        self.session.add_all([
+            Favorite(user_id=1, news_id=999),
+            Favorite(user_id=2, news_id=10),
+        ])
+        self.session.commit()
+
+        status, first = await self.request("GET", "list", "", "a" * 32)
+        self.assertEqual(status, 200)
+        self.assertEqual(first["data"]["total"], 13)
+        self.assertTrue(first["data"]["hasMore"])
+        self.assertEqual([item["id"] for item in first["data"]["list"]], list(range(22, 12, -1)))
+        item = first["data"]["list"][0]
+        self.assertEqual(set(item), {
+            "id", "title", "description", "image", "author",
+            "publishTime", "categoryId", "views", "favoriteTime",
+        })
+        self.assertIsNone(item["image"])
+        self.assertEqual(item["favoriteTime"], favorite_time.isoformat())
+
+        for query, expected, has_more in (
+            ("page=2&pageSize=10", [12, 11, 10], False),
+            ("page=20&pageSize=10", [], False),
+            ("page=2&pageSize=2", [20, 19], True),
+            ("pageSize=100", list(range(22, 9, -1)), False),
+        ):
+            status, body = await self.request("GET", "list", query, "a" * 32)
+            self.assertEqual(status, 200)
+            self.assertEqual(body["data"]["total"], 13)
+            self.assertEqual(body["data"]["hasMore"], has_more)
+            self.assertEqual([item["id"] for item in body["data"]["list"]], expected)
+
+        status, body = await self.request("GET", "list", "", "b" * 32)
+        self.assertEqual(status, 200)
+        self.assertEqual(body["data"]["total"], 1)
+        self.assertEqual([item["id"] for item in body["data"]["list"]], [10])
+
+    async def test_clear_is_idempotent_and_removes_only_current_users_records(self):
+        self.session.add_all([
+            Favorite(user_id=1, news_id=10),
+            Favorite(user_id=1, news_id=999),
+            Favorite(user_id=2, news_id=10),
+        ])
+        self.session.commit()
+        for _ in range(2):
+            status, body = await self.request("DELETE", "clear", "", "a" * 32)
+            self.assertEqual(status, 200)
+            self.assertEqual(body, {"code": 200, "message": "清空收藏成功", "data": None})
+        favorites = self.session.scalars(select(Favorite)).all()
+        self.assertEqual([(item.user_id, item.news_id) for item in favorites], [(2, 10)])
+        status, body = await self.request("GET", "list", "", "a" * 32)
+        self.assertEqual(status, 200)
+        self.assertEqual(body["data"], {"list": [], "total": 0, "hasMore": False})
+
+    async def test_failed_clear_rolls_back(self):
+        self.session.add(Favorite(user_id=1, news_id=10))
+        self.session.commit()
+        clear = favorite_crud.clear
+
+        async def failing_clear(db, user_id):
+            await clear(db, user_id)
+            raise RuntimeError("模拟删除后事务失败")
+
+        with patch.object(favorite_crud, "clear", side_effect=failing_clear):
+            with self.assertRaises(RuntimeError):
+                await self.request("DELETE", "clear", "", "a" * 32)
+        favorites = self.session.scalars(select(Favorite)).all()
+        self.assertEqual([(item.user_id, item.news_id) for item in favorites], [(1, 10)])

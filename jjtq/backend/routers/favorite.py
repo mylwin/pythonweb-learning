@@ -9,6 +9,9 @@ from jjtq.backend.models.users import User
 from jjtq.backend.schemas.favorite import (
     FavoriteAddResponse,
     FavoriteCheckResponse,
+    FavoriteClearResponse,
+    FavoriteListRequest,
+    FavoriteListResponse,
     FavoriteRemoveResponse,
 )
 from jjtq.backend.services import favorite as favorite_service
@@ -72,3 +75,33 @@ async def remove_favorite(
     """
     await favorite_service.remove_favorite(db, current_user, news_id)
     return success_response(message="取消收藏成功")
+
+
+@router.get("/list", response_model=FavoriteListResponse)
+async def get_favorite_list(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    params: Annotated[FavoriteListRequest, Query()],
+):
+    """
+    分页获取当前用户的有效收藏，按收藏时间和 ID 倒序排列。
+
+    :param db: 数据库异步会话
+    :param current_user: 已认证用户
+    :param params: 页码及每页数量，对应查询参数 page、pageSize
+    :return: 包含 list、total 和 hasMore 的统一成功响应
+    """
+    favorite_list = await favorite_service.get_favorite_list(
+        db, current_user, params.page, params.page_size
+    )
+    return success_response(data=favorite_list)
+
+
+@router.delete("/clear", response_model=FavoriteClearResponse)
+async def clear_favorites(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """清空当前登录用户的全部收藏。"""
+    await favorite_service.clear_favorites(db, current_user)
+    return success_response(message="清空收藏成功")

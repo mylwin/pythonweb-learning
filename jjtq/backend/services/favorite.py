@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jjtq.backend.crud import favorite as favorite_crud
 from jjtq.backend.crud import news as news_crud
 from jjtq.backend.models.users import User
-from jjtq.backend.schemas.favorite import FavoriteAddData, FavoriteCheckData
+from jjtq.backend.schemas.favorite import (
+    FavoriteAddData,
+    FavoriteCheckData,
+    FavoriteListData,
+    FavoriteListInfoData,
+)
 from jjtq.backend.utils.errors import BusinessError
 
 
@@ -74,3 +79,33 @@ async def remove_favorite(
     :param news_id: 新闻 ID
     """
     await favorite_crud.remove(db, current_user.id, news_id)
+
+
+async def get_favorite_list(
+    db: AsyncSession,
+    current_user: User,
+    page: int,
+    page_size: int,
+) -> FavoriteListData:
+    """
+    获取当前用户的收藏列表。
+
+    :param db: 数据库异步会话
+    :param current_user: 已认证用户
+    :param page: 页码，从 1 开始
+    :param page_size: 每页数量
+    :return: 收藏列表数据模型
+    """
+
+    favorite_list = await favorite_crud.get_list(db, current_user.id, page, page_size)
+    total = await favorite_crud.get_count(db, current_user.id)
+    return FavoriteListData(
+        data_list=[FavoriteListInfoData.model_validate(item) for item in favorite_list],
+        total=total,
+        has_more=page * page_size < total,
+    )
+
+
+async def clear_favorites(db: AsyncSession, current_user: User) -> None:
+    """清空当前用户的收藏，空列表重复清空也视为成功。"""
+    await favorite_crud.clear(db, current_user.id)

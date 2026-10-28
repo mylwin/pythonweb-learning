@@ -2,6 +2,18 @@
 GET http://127.0.0.1:8000/api/favorite/check?newsId=1
 Authorization: Bearer <token>
 
+### 分页获取当前用户收藏（默认 page=1、pageSize=10）
+GET http://127.0.0.1:8000/api/favorite/list?page=1&pageSize=10
+Authorization: Bearer <token>
+
+### 分页参数不合法：HTTP 422
+GET http://127.0.0.1:8000/api/favorite/list?pageSize=101
+Authorization: Bearer <token>
+
+### 清空当前用户的全部收藏（重复调用仍返回成功）
+DELETE http://127.0.0.1:8000/api/favorite/clear
+Authorization: Bearer <token>
+
 ### 未携带令牌：HTTP 401
 GET http://127.0.0.1:8000/api/favorite/check?newsId=1
 
