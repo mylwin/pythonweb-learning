@@ -18,7 +18,7 @@
         >
           <van-pull-refresh v-model="newsStore.refreshing" @refresh="onRefresh">
             <van-list
-              v-model:loading="newsStore.loading"
+              :loading="newsStore.loading"
               :finished="newsStore.finished"
               :finished-text="$t('home.noMore')"
               @load="onLoad"
@@ -90,7 +90,7 @@ onMounted(async () => {
   await newsStore.getCategories()
   applyRouteCategory()
 
-  if (!newsStore.newsList.length) {
+  if (!newsStore.newsList.length && !newsStore.loading) {
     await newsStore.getNewsList(true)
   }
 })

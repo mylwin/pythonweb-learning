@@ -39,6 +39,7 @@ export const useNewsStore = defineStore('news', {
     refreshing: false,
     finished: false,
     categoriesLoading: false,
+    listRequestId: 0,
     detailRequestId: 0,
     error: '',
   }),
@@ -74,16 +75,19 @@ export const useNewsStore = defineStore('news', {
     },
 
     changeCategory(categoryId) {
-      if (categoryId === MORE_CATEGORY_ID) return
-      if (this.currentCategory === categoryId && this.newsList.length) return
+      if (this.currentCategory === categoryId && (this.newsList.length || this.loading)) return
 
+      // 切换分类时立即清空旧列表，避免失败或请求期间显示其他分类的新闻。
+      if (this.currentCategory !== categoryId) {
+        this.newsList = []
+      }
       this.currentCategory = categoryId
-      this.getNewsList(true)
+      return this.getNewsList(true)
     },
 
     async getNewsList(isRefresh = false) {
-      // 同一个列表同时只允许一个请求，避免 van-list 重复触发
-      if (this.loading) return
+      // 普通加载只允许一个请求；刷新或切换分类可以替换正在进行的请求。
+      if (this.loading && !isRefresh) return
 
       if (isRefresh) {
         this.refreshing = true
@@ -95,27 +99,34 @@ export const useNewsStore = defineStore('news', {
       this.error = ''
 
       const page = isRefresh ? 1 : this.page + 1
+      const categoryId = this.currentCategory
+      const requestId = ++this.listRequestId
 
       try {
         const data = await newsApi.getNewsList({
-          categoryId: this.currentCategory,
+          categoryId,
           page,
           pageSize: PAGE_SIZE,
         })
 
+        // 旧分类或旧刷新请求即使晚到，也不能覆盖当前列表和加载状态。
+        if (requestId !== this.listRequestId) return
         const list = data?.list || []
         this.newsList = isRefresh ? list : mergeUnique(this.newsList, list)
         this.page = page
         this.finished = list.length < PAGE_SIZE
       } catch (error) {
+        if (requestId !== this.listRequestId) return
         this.error = error.message || '获取新闻列表失败'
         // 刷新失败时保留旧数据，避免页面变空
         if (isRefresh) {
           this.finished = false
         }
       } finally {
-        this.loading = false
-        this.refreshing = false
+        if (requestId === this.listRequestId) {
+          this.loading = false
+          this.refreshing = false
+        }
       }
     },
 
