@@ -25,7 +25,11 @@ async_engine = create_async_engine(
     max_overflow=20,  # 连接池溢出时最大连接数
     pool_recycle=3600,  # 连接池回收时间
     pool_pre_ping=True,  # 连接池预检
-    connect_args={"connect_timeout": 10},  # 连接超时时间
+    connect_args={
+        "connect_timeout": 10,
+        # 每个新连接固定为北京时间；TIMESTAMP 和 NOW() 使用同一会话时区。
+        "init_command": "SET time_zone = '+08:00'",
+    },
 )
 
 async_session_factory = async_sessionmaker(
