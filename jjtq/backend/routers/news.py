@@ -1,10 +1,12 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from jjtq.backend.config.database import get_db
 from jjtq.backend.crud import news as news_crud
+from jjtq.backend.dependencies.redis import get_redis
 from jjtq.backend.schemas.news import CategoryListResponse, NewsDetailResponse
 from jjtq.backend.services import news as news_service
 from jjtq.backend.utils.response import success_response
@@ -34,6 +36,7 @@ async def get_categories(
 @router.get("/list")
 async def get_news_list(
     db: Annotated[AsyncSession, Depends(get_db)],
+    cache: Annotated[Redis, Depends(get_redis)],
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=10, le=100)] = 10,
     category_id: Annotated[int | None, Query(alias="categoryId")] = None,
@@ -42,13 +45,14 @@ async def get_news_list(
     获取新闻列表。
 
     :param db: 数据库异步会话
+    :param cache: 应用共享的 Redis 客户端
     :param page: 页码，从 1 开始
     :param page_size: 每页记录数，对应查询参数 pageSize
     :param category_id: 分类 ID，对应查询参数 categoryId
     :return: 统一成功响应
     """
-    news_list = await news_crud.get_news_list(
-        db, page=page, page_size=page_size, category_id=category_id
+    news_list = await news_service.get_news_list(
+        db, cache, page=page, page_size=page_size, category_id=category_id
     )
     return success_response(data={"list": news_list})
 

@@ -10,20 +10,27 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from jjtq.backend.config.database import async_engine
+from jjtq.backend.config.redis import create_redis_client
 from jjtq.backend.routers import favorite, history, news, users
 from jjtq.backend.utils.exception import register_exception_handlers
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    在应用退出时释放 MySQL 连接池。
+    在应用生命周期内复用连接池，退出时释放 Redis 和 MySQL 资源。
 
-    :param app: 当前 FastAPI 应用
+    :param app: 当前 FastAPI 应用，客户端保存在应用状态中
     """
+    app.state.redis_client = create_redis_client()
     try:
         yield
     finally:
-        await async_engine.dispose()
+        try:
+            await app.state.redis_client.aclose()
+        finally:
+            # 即使 Redis 关闭失败，也必须释放数据库连接池。
+            await async_engine.dispose()
 
 
 # 创建 app 实例

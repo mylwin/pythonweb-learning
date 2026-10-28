@@ -15,6 +15,7 @@ dependencies = [
     "pydantic-settings>=2.16.1",
     "sqlalchemy[asyncio]>=2.1.5",
     "uvicorn>=0.54.0",
+    "redis>=5.2,<7",
 ]
 
 # 项目只用于统一管理依赖和虚拟环境，不再打包 Python 包

@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 class Settings(BaseSettings):
     async_database_url: str = Field(validation_alias="ASYNC_DATABASE_URL")
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).resolve().parents[1] / ".env"
+        env_file=Path(__file__).resolve().parents[1] / ".env",
+        # 数据库与 Redis 共用环境文件，只读取数据库配置项。
+        extra="ignore",
     )
 
 
