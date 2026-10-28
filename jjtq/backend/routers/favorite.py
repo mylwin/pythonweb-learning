@@ -6,7 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jjtq.backend.config.database import get_db
 from jjtq.backend.dependencies.auth import get_current_user
 from jjtq.backend.models.users import User
-from jjtq.backend.schemas.favorite import FavoriteCheckResponse
+from jjtq.backend.schemas.favorite import (
+    FavoriteAddResponse,
+    FavoriteCheckResponse,
+    FavoriteRemoveResponse,
+)
 from jjtq.backend.services import favorite as favorite_service
 from jjtq.backend.utils.response import success_response
 
@@ -28,5 +32,43 @@ async def check_favorite_status(
     :param news_id: 新闻 ID，对应查询参数 newsId
     :return: 包含 isFavorite 的统一成功响应
     """
-    favorite_status = await favorite_service.get_favorite_status(db, current_user, news_id)
+    favorite_status = await favorite_service.get_favorite_status(
+        db, current_user, news_id
+    )
     return success_response(data=favorite_status)
+
+
+@router.post("/add", response_model=FavoriteAddResponse)
+async def add_favorite(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    news_id: Annotated[int, Query(alias="newsId", title="新闻编号", ge=1)],
+):
+    """
+    添加收藏。
+
+    :param db: 数据库异步会话
+    :param current_user: 已认证用户
+    :param news_id: 新闻 ID，对应查询参数 newsId
+    :return: 统一成功响应
+    """
+    favorite_data = await favorite_service.add_favorite(db, current_user, news_id)
+    return success_response(message="收藏成功", data=favorite_data)
+
+
+@router.delete("/remove", response_model=FavoriteRemoveResponse)
+async def remove_favorite(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    news_id: Annotated[int, Query(alias="newsId", title="新闻编号", ge=1)],
+):
+    """
+    删除收藏。
+
+    :param db: 数据库异步会话
+    :param current_user: 已认证用户
+    :param news_id: 新闻 ID，对应查询参数 newsId
+    :return: 统一成功响应
+    """
+    await favorite_service.remove_favorite(db, current_user, news_id)
+    return success_response(message="取消收藏成功")
